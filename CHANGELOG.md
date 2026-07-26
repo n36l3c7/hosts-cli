@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-27
+
+`edit`, `import` and `block`.
+
+### Added
+
+- `edit`, opening the file in an editor and checking what comes back. Errors
+  stop it being installed and warnings do not. The work is never thrown away:
+  with a terminal the editor opens again with the findings shown, the way
+  `visudo` does it, and without one the path of the copy is printed.
+- `import`, merging entries from a file or from standard input. The source is
+  checked before anything is written, and one bad line makes the whole import
+  fail. An entry is taken or left as a whole.
+- `block`, pointing domains at a sinkhole address, with the domains read from
+  standard input when none are given. Both `0.0.0.0` and `::` are used unless
+  `--ipv4-only` says otherwise, because on a machine with IPv6 a block that
+  only covers IPv4 blocks nothing at all. `--to` names another address.
+- A marked-off section holding blocked domains, so that a blocklist of tens of
+  thousands of machine written lines can be treated as one thing. Its markers
+  go away with the last entry in it.
+- `ls --blocked`, to include the entries inside that section.
+
+### Changed
+
+- `ls` leaves the block section out by default, so that the entries someone
+  actually maintains are not buried under a generated list. `get` still
+  resolves what is in it and `search` still finds it.
+- `check` no longer compares the lines inside the block section with each
+  other, since near identical generated names would produce nothing but
+  noise. The per line rules still apply to them.
+- The editor started by `edit` runs with the locale the user had. The program
+  sets `LC_ALL=C` for its own parsing, which is the wrong thing to hand to an
+  editor about to be shown someone else's text.
+
 ## [0.3.0] - 2026-07-27
 
 Editing entries: `add`, `rm`, `on` and `off`, on top of the write engine of
@@ -139,7 +173,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.0.1...v0.1.0

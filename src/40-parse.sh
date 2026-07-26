@@ -19,6 +19,7 @@ declare -a _hf_names=()    # names separated by a space, canonical first
 declare -a _hf_comment=()  # trailing comment, without the leading '#'
 declare -a _hf_has_comment=()
 declare -a _hf_reason=()   # why a line was rejected, empty unless invalid
+declare -a _hf_in_block=() # 1 for a line inside the managed block section
 
 # Lookup index from a lowercased name to the array positions carrying it,
 # as a list separated by a space.
@@ -27,6 +28,9 @@ declare -A _hf_by_name=()
 _hf_path=''
 _hf_count=0
 _hf_trailing_newline=1
+_hf_block_open=-1  # index of the line opening the block section, or -1
+_hf_block_close=-1 # index of the line closing it, or -1
+_HF_BLOCK_STATE=0  # carried from line to line while reading
 
 # Result of parse_line, and of the record accessors at the end of this file.
 PARSED_KIND=''
@@ -163,11 +167,16 @@ hostsfile_load() {
   _hf_comment=()
   _hf_has_comment=()
   _hf_reason=()
+  _hf_in_block=()
   _hf_by_name=()
   _hf_trailing_newline=1
+  _hf_block_open=-1
+  _hf_block_close=-1
+  _HF_BLOCK_STATE=0
 
   while IFS= read -r line; do
     _hf_store "$line" "$index"
+    _hf_track_block "$line" "$index"
     index+=1
   done <"$path"
 
@@ -176,6 +185,7 @@ hostsfile_load() {
   if [[ -n $line ]]; then
     _hf_trailing_newline=0
     _hf_store "$line" "$index"
+    _hf_track_block "$line" "$index"
     index+=1
   fi
 
@@ -208,6 +218,42 @@ _hf_store() {
     name=${name,,}
     _hf_by_name[$name]="${_hf_by_name[$name]:-}${_hf_by_name[$name]:+ }$index"
   done
+}
+
+# Note whether a line falls inside the managed block section, carrying the
+# state from one line to the next in _HF_BLOCK_STATE. The marker lines count
+# as part of the section, so that removing it removes them too.
+_hf_track_block() {
+  local line=$1
+  local -i index=$2
+
+  # A marker is a comment, so a line without a hash cannot be one. Testing for
+  # that first keeps the common case to a single glob: trimming every line of
+  # a fifty thousand line blocklist costs more than the rest of this function
+  # put together.
+  if [[ $line != *'#'* ]]; then
+    _hf_in_block[index]=$_HF_BLOCK_STATE
+    return 0
+  fi
+
+  trim "$line"
+
+  if [[ $TRIMMED == "$BLOCK_SECTION_OPEN" ]]; then
+    _hf_block_open=$index
+    _HF_BLOCK_STATE=1
+    _hf_in_block[index]=1
+    return 0
+  fi
+
+  if ((_HF_BLOCK_STATE)) && [[ $TRIMMED == "$BLOCK_SECTION_CLOSE" ]]; then
+    _hf_block_close=$index
+    _hf_in_block[index]=1
+    _HF_BLOCK_STATE=0
+    return 0
+  fi
+
+  _hf_in_block[index]=$_HF_BLOCK_STATE
+  return 0
 }
 
 # Store the names of a record in the RECORD_NAMES array.
