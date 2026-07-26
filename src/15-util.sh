@@ -33,3 +33,25 @@ split_fields() {
 split_on_whitespace() {
   split_fields $' \t\n' "$1"
 }
+
+# Expand a pathname pattern into the FIELDS array, empty when nothing matches.
+#
+# Pathname expansion is off program wide, so it is turned on for this one
+# expansion and turned straight back off. This runs once per command, not once
+# per line, so the cost that made the same guard unacceptable inside
+# split_fields does not arise here.
+expand_glob() {
+  local nullglob_was_set=1
+
+  shopt -q nullglob || nullglob_was_set=0
+  shopt -s nullglob
+  set +f
+  # shellcheck disable=SC2206 # expansion is the point here
+  FIELDS=($1)
+  set -f
+  if ((!nullglob_was_set)); then
+    shopt -u nullglob
+  fi
+
+  return 0
+}

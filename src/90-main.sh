@@ -8,6 +8,10 @@
 
 OPT_FILE=$DEFAULT_HOSTS_FILE
 OPT_JSON=0
+OPT_DRY_RUN=0
+OPT_BACKUP=1
+OPT_YES=0
+OPT_FORCE=0
 
 main() {
   local command=''
@@ -43,6 +47,22 @@ main() {
         ;;
       --json)
         OPT_JSON=1
+        shift
+        ;;
+      --dry-run)
+        OPT_DRY_RUN=1
+        shift
+        ;;
+      --no-backup)
+        OPT_BACKUP=0
+        shift
+        ;;
+      -y | --yes)
+        OPT_YES=1
+        shift
+        ;;
+      --force)
+        OPT_FORCE=1
         shift
         ;;
       -q | --quiet)
@@ -94,6 +114,9 @@ main() {
     search) cmd_search "${rest[@]}" || status=$? ;;
     check) cmd_check "${rest[@]}" || status=$? ;;
     export) cmd_export "${rest[@]}" || status=$? ;;
+    backup) cmd_backup "${rest[@]}" || status=$? ;;
+    restore) cmd_restore "${rest[@]}" || status=$? ;;
+    diff) cmd_diff "${rest[@]}" || status=$? ;;
     *) die_usage '' "unknown command: $command" ;;
   esac
 

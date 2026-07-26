@@ -51,8 +51,8 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>0.1.0</code>: the read-only commands are complete and
-        tested. No command writes to the file yet.
+        This is <code>0.2.0</code>: the read-only commands and the backup store
+        are complete and tested. No command edits an entry yet.
       </p>
       <table>
         <thead>
@@ -73,13 +73,13 @@
             <td>2</td>
             <td><code>backup</code>, <code>backup ls</code>,
               <code>restore</code>, <code>diff</code></td>
-            <td>next</td>
+            <td>released in 0.2.0</td>
           </tr>
           <tr>
             <td>3</td>
             <td><code>add</code>, <code>rm</code>, <code>on</code>,
               <code>off</code></td>
-            <td>planned</td>
+            <td>next</td>
           </tr>
           <tr>
             <td>4</td>
@@ -106,9 +106,18 @@
         <li>
           Bash 4.4 or newer. The program refuses to run on anything older.
         </li>
+      </ul>
+      <p>Two soft dependencies, neither of which stops the program working:</p>
+      <ul>
         <li>
           <code>diff</code>, from diffutils, for the <code>diff</code> command
-          only, once it lands.
+          and for the preview shown by <code>--dry-run</code>. Its absence is
+          reported rather than worked around badly.
+        </li>
+        <li>
+          <code>flock</code>, from util-linux, to serialise concurrent writers.
+          Without it writes are not serialised, which can lose an update but
+          cannot damage the file.
         </li>
       </ul>
       <p>
@@ -136,6 +145,12 @@ hosts get staging                 # just the address, ready to capture
 hosts search "staging box"        # match on address, names or comments
 hosts check                       # lint the file
 hosts --file ./hosts.new check --strict
+
+sudo hosts backup                 # keep a copy before editing by hand
+$EDITOR /etc/hosts
+hosts diff                        # see what changed since that copy
+sudo hosts restore --yes          # and go back
+
 man hosts</code></pre>
 
       <h2 id="reference">Command line reference</h2>
@@ -187,6 +202,39 @@ man hosts</code></pre>
               document with <code>--json</code>.
             </td>
           </tr>
+          <tr>
+            <td><code>backup</code></td>
+            <td>
+              Take a backup. This only reads the file, so it needs no privilege
+              on it; what it needs is somewhere to write the copy. A backup
+              identical to the most recent one is not taken.
+            </td>
+          </tr>
+          <tr>
+            <td><code>backup ls</code></td>
+            <td>
+              List the backups already taken, most recent first, as four tab
+              separated fields: index, identifier, time, size in bytes.
+            </td>
+          </tr>
+          <tr>
+            <td><code>restore [id]</code></td>
+            <td>
+              Put a backup back in place, the most recent one by default.
+              <code>id</code> is either the index shown by
+              <code>backup ls</code> or an identifier in full. The content about
+              to be replaced is backed up first, so a restore can itself be
+              undone.
+            </td>
+          </tr>
+          <tr>
+            <td><code>diff [id]</code></td>
+            <td>
+              Compare the file with a backup. Removed lines are what the backup
+              holds, added lines what the file holds now. Exits with 0 whether
+              or not there are differences.
+            </td>
+          </tr>
         </tbody>
       </table>
       <p>Every command accepts <code>--help</code>.</p>
@@ -203,11 +251,37 @@ man hosts</code></pre>
         <tbody>
           <tr>
             <td><code>--file &lt;path&gt;</code></td>
-            <td>Operate on a file other than <code>/etc/hosts</code>.</td>
+            <td>
+              Operate on a file other than <code>/etc/hosts</code>. A symbolic
+              link is followed: the write lands where it points rather than
+              replacing the link with a regular file.
+            </td>
           </tr>
           <tr>
             <td><code>--json</code></td>
             <td>Machine-readable output.</td>
+          </tr>
+          <tr>
+            <td><code>--dry-run</code></td>
+            <td>
+              Show what would happen and write nothing. The exit status is the
+              one the real run would have had.
+            </td>
+          </tr>
+          <tr>
+            <td><code>--no-backup</code></td>
+            <td>Skip the automatic backup. Not advisable.</td>
+          </tr>
+          <tr>
+            <td><code>--force</code></td>
+            <td>Go ahead with something that would otherwise be refused.</td>
+          </tr>
+          <tr>
+            <td><code>-y</code>, <code>--yes</code></td>
+            <td>
+              Answer yes to the confirmations. Without a terminal and without
+              this, a confirmation is refused rather than assumed.
+            </td>
           </tr>
           <tr>
             <td><code>-q</code>, <code>--quiet</code></td>
@@ -379,7 +453,9 @@ man hosts</code></pre>
           </tr>
           <tr>
             <td><code>3</code></td>
-            <td>Insufficient permissions to read the file.</td>
+            <td>
+              Insufficient permissions to read the file or write where it lives.
+            </td>
           </tr>
           <tr>
             <td><code>4</code></td>
@@ -387,7 +463,22 @@ man hosts</code></pre>
           </tr>
           <tr>
             <td><code>5</code></td>
-            <td>The requested hostname is not in the file.</td>
+            <td>The requested hostname or backup is not there.</td>
+          </tr>
+          <tr>
+            <td><code>6</code></td>
+            <td>Refused because <code>--force</code> was not given.</td>
+          </tr>
+          <tr>
+            <td><code>7</code></td>
+            <td>
+              Write abandoned, the result could not be trusted, nothing was
+              written.
+            </td>
+          </tr>
+          <tr>
+            <td><code>8</code></td>
+            <td>The operation was not confirmed.</td>
           </tr>
         </tbody>
       </table>
@@ -395,6 +486,13 @@ man hosts</code></pre>
         A missing target file is <code>1</code> and not <code>5</code> on
         purpose: <code>get</code> uses <code>5</code> for a hostname that is
         absent, and a script must be able to tell the two apart.
+      </p>
+      <p>
+        <code>8</code> covers both a declined prompt and a confirmation that
+        could not be asked for. Without a terminal and without
+        <code>--yes</code>, the answer is refused rather than assumed: the
+        behaviour does depend on the environment, but only ever in the safe
+        direction.
       </p>
 
       <h2 id="json">JSON output</h2>
@@ -429,12 +527,113 @@ man hosts</code></pre>
         included, distinguished by <code>kind</code>.
       </p>
 
-      <h2 id="configuration">Configuration</h2>
+      <h2 id="writing">Writing</h2>
       <p>
-        None yet. Configuration arrives with the commands that need it, through
-        environment variables (<code>HOSTS_BACKUP_DIR</code>,
-        <code>HOSTS_KEEP_BACKUPS</code>) and the global
-        <code>--file</code> flag.
+        Every change goes to a temporary file in the directory of the target, is
+        validated, and is then moved into place with a rename. The kernel
+        performs a rename within one filesystem atomically, so what is
+        guaranteed is this:
+      </p>
+      <blockquote>
+        <p>
+          After a change the file holds either the whole of the old content or
+          the whole of the new one, never a mixture. That holds through a crash
+          or a power cut.
+        </p>
+      </blockquote>
+      <p>
+        What is <strong>not</strong> guaranteed is that the new content survives
+        a power cut in the moment right after the rename: Bash cannot call
+        <code>fsync</code>, so the directory entry cannot be forced to disk. The
+        failure mode of that is finding the old file, which is a lost change,
+        never a damaged one. Saying so plainly is better than implying a
+        durability the tool cannot deliver.
+      </p>
+      <p>
+        Owner, group, permissions and SELinux context are carried over before
+        the file is installed. The SELinux part is not decoration: a file
+        created in <code>/etc</code> inherits <code>etc_t</code> by type
+        transition while <code>/etc/hosts</code> is <code>net_conf_t</code>, and
+        a rename keeps whatever context the new file has, so without copying it
+        across a confined service on an enforcing system can stop resolving
+        names.
+      </p>
+      <p>
+        An extended ACL cannot be carried over by a rename, so a file that has
+        one is refused with exit <code>6</code> unless <code>--force</code> is
+        given. Losing an ACL changes who can read and write the file, which is
+        too quiet a way to change a permission.
+      </p>
+      <p>
+        Concurrent writers are serialised with <code>flock</code> when it is
+        there, and not serialised when it is not. A lock built out of
+        <code>mkdir</code> would have to guess whether a leftover lock belongs
+        to a live process, and guessing wrong leaves the tool stuck for good: a
+        worse outcome than the problem, since two concurrent writers can only
+        lose an update, never damage the file.
+      </p>
+
+      <h2 id="backups">Backups</h2>
+      <p>
+        A backup is taken before every change, unless <code>--no-backup</code>
+        says otherwise. Backups live in one directory per target file, each a
+        byte-for-byte copy with a sidecar of metadata beside it:
+      </p>
+      <pre><code>target=/etc/hosts
+time=2026-07-27T12:34:56Z
+mode=644
+owner=root
+group=root
+sha256=6b604eae8902aea3b14f7b6d49f208116854a8a8c8ae33618a1ad8062462aca2</code></pre>
+      <p>
+        The copy is deliberately plain, so that in an emergency the file can be
+        put back with <code>cp</code>, knowing nothing about this program.
+      </p>
+      <p>
+        The sidecar is what makes restoring safe. It records the absolute path
+        the backup came from, and <code>restore</code> refuses when that is not
+        the file it is about to write: without that check, a backup taken with
+        <code>--file</code> from a scratch file could later end up over
+        <code>/etc/hosts</code>. The recorded SHA-256 is verified before
+        anything is written, and is also what tells an unchanged file from a
+        changed one, without which a run of writes that change nothing would
+        push every backup that matters out of the rotation window.
+      </p>
+      <p>
+        <code>restore</code> backs up the content it is about to replace, so a
+        restore can itself be undone. Only the content is restored: ownership
+        and permissions stay as they are now, and the sidecar keeps the original
+        ones for reference.
+      </p>
+
+      <h2 id="configuration">Configuration</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>HOSTS_BACKUP_DIR</code></td>
+            <td><code>/var/backups/hosts</code></td>
+            <td>where backups are kept</td>
+          </tr>
+          <tr>
+            <td><code>HOSTS_KEEP_BACKUPS</code></td>
+            <td><code>20</code></td>
+            <td>how many to keep per file</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The most recent backup is never removed, whatever
+        <code>HOSTS_KEEP_BACKUPS</code> says. If the backup directory cannot be
+        written, the command fails with exit <code>3</code> and names the
+        variable to set, rather than quietly putting backups somewhere you would
+        not think to look for them.
       </p>
 
       <h2 id="development">Development</h2>
@@ -490,7 +689,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 0.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.2.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

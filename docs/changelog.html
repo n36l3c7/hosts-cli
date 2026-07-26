@@ -26,6 +26,68 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-2-0">0.2.0 &mdash; 2026-07-27</h2>
+      <p>
+        The atomic write engine and the backup store. <code>restore</code> is
+        the first command that writes to the file; no command edits an entry
+        yet.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>backup</code> and <code>backup ls</code>, taking and listing
+          byte-for-byte copies with a sidecar of metadata. Taking one only reads
+          the file, so it needs no privilege on it.
+        </li>
+        <li>
+          <code>restore</code>, putting a backup back in place by index or by
+          identifier, after verifying its checksum and the path it was taken
+          from, and after backing up the content it is about to replace.
+        </li>
+        <li><code>diff</code>, comparing the file with a backup.</li>
+        <li>
+          Global options <code>--dry-run</code>, <code>--no-backup</code>,
+          <code>--force</code> and <code>-y</code>/<code>--yes</code>.
+        </li>
+        <li>
+          Exit codes 6, 7 and 8 added to the contract: refused without
+          <code>--force</code>, write abandoned, and operation not confirmed.
+        </li>
+        <li>
+          <code>HOSTS_BACKUP_DIR</code> and <code>HOSTS_KEEP_BACKUPS</code>.
+        </li>
+        <li>
+          The written guarantee that a change leaves the file holding either the
+          whole of the old content or the whole of the new one, and the equally
+          explicit statement that surviving a power cut immediately after the
+          rename is not promised, because Bash cannot call <code>fsync</code>.
+        </li>
+        <li>
+          Owner, group, permissions and SELinux context are carried over to the
+          new file before it is installed. Without copying the context across, a
+          file written into <code>/etc</code> keeps <code>etc_t</code> instead
+          of <code>net_conf_t</code>, and a confined service on an SELinux
+          system can stop resolving names.
+        </li>
+        <li>
+          A file carrying an extended ACL is refused with exit 6 unless
+          <code>--force</code> is given, because a rename cannot preserve one
+          and losing it changes who may read and write the file.
+        </li>
+        <li>
+          Writers are serialised with <code>flock</code> where it exists. A lock
+          built from <code>mkdir</code> was considered and rejected: it would
+          have to guess whether a leftover lock belongs to a live process, and
+          guessing wrong leaves the tool stuck for good, which is worse than the
+          problem it solves.
+        </li>
+        <li>
+          A symbolic link given to <code>--file</code> is followed, so a write
+          lands where it points instead of replacing the link with a regular
+          file.
+        </li>
+      </ul>
+
       <h2 id="v0-1-0">0.1.0 &mdash; 2026-07-27</h2>
       <p>
         The read-only commands. Nothing writes to the file yet, and no command
@@ -137,7 +199,7 @@
 
     <footer>
       <p>
-        hosts 0.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.2.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

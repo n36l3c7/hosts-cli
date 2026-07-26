@@ -1,4 +1,5 @@
 .TH HOSTS 1 2026-07-27 "hosts @VERSION@" "User Commands"
+.\" Written by hand: no generator, no conversion step.
 .SH NAME
 hosts \- a safe command\-line manager for /etc/hosts
 .SH SYNOPSIS
@@ -16,9 +17,8 @@ performed on a temporary file in the same directory, validated, and then
 moved into place with an atomic rename that preserves owner, group and
 permissions.
 .PP
-This release provides the read only commands.
-No command writes to the file, and none of them needs any privilege beyond
-being able to read it.
+This release provides the read only commands and the backup store.
+No command edits an entry yet.
 .SH COMMANDS
 .TP
 .BI "ls [" options "] [" pattern ]
@@ -67,6 +67,31 @@ Without
 .B \-\-json
 this reproduces it byte for byte, comments, blank lines and a missing final
 newline included.
+.TP
+.B backup
+Take a backup of the file.
+This only reads the file, so it needs no privilege on it; what it needs is
+somewhere to write the copy.
+A backup that would be identical to the most recent one is not taken.
+.TP
+.B "backup ls"
+List the backups already taken, most recent first, as four tab separated
+fields: index, identifier, time, size in bytes.
+.TP
+.BI "restore [" id ]
+Put a backup back in place, the most recent one by default.
+.I id
+is either the index shown by
+.B "backup ls"
+, where 1 is the most recent, or an identifier in full.
+The content that is about to be replaced is backed up first, so a restore can
+itself be undone.
+Only the content is restored: ownership and permissions stay as they are now.
+.TP
+.BI "diff [" id ]
+Compare the file with a backup, the most recent one by default.
+Removed lines are what the backup holds, added lines what the file holds now.
+Exits with 0 whether or not there are differences.
 .PP
 Every command accepts
 .B \-\-help
@@ -77,9 +102,27 @@ These are accepted before and after the command name.
 .BI \-\-file " path"
 Operate on a file other than
 .IR /etc/hosts .
+A symbolic link is followed, so that the write lands where it points instead
+of replacing the link with a regular file.
 .TP
 .B \-\-json
 Produce machine readable output.
+.TP
+.B \-\-dry\-run
+Show what would happen and write nothing.
+The exit status is the one the real run would have had.
+.TP
+.B \-\-no\-backup
+Skip the automatic backup taken before a change.
+Not advisable.
+.TP
+.B \-\-force
+Go ahead with something that would otherwise be refused.
+.TP
+.BR \-y ", " \-\-yes
+Answer yes to the confirmations.
+Without a terminal and without this option a confirmation is refused rather
+than assumed.
 .TP
 .BR \-q ", " \-\-quiet
 Silence diagnostics.
@@ -153,11 +196,78 @@ the error parser of an editor can consume them directly:
 .RS
 .I file : line ": " severity ": " rule ": " message
 .RE
+.SH WRITING
+Every change is written to a temporary file in the directory of the target,
+validated, and then moved into place with a rename.
+The kernel performs a rename within one filesystem atomically, so after a
+change the file holds either the whole of the old content or the whole of the
+new one, never a mixture, and that holds through a crash or a power cut.
+.PP
+What cannot be promised is that the new content survives a power cut in the
+moment right after the rename: bash cannot call
+.BR fsync (2),
+so the directory entry cannot be forced to disk.
+The failure mode of that is finding the old file, which is to say a lost
+change, never a damaged one.
+.PP
+Owner, group, permissions and SELinux context are carried over to the new
+file before it is installed.
+An extended ACL cannot be carried over by a rename, so a file that has one is
+refused unless
+.B \-\-force
+is given.
+.PP
+Writers are serialised with
+.BR flock (1)
+when it is available, and not serialised when it is not.
+A lock built out of
+.BR mkdir (1)
+would have to guess whether a leftover lock belongs to a live process, and
+guessing wrong leaves the tool stuck for good: a worse outcome than the
+problem, because two concurrent writers can only lose an update, never damage
+the file.
+.SH BACKUPS
+A backup is taken before every change unless
+.B \-\-no\-backup
+says otherwise.
+Backups live in one directory per target file under
+.IR /var/backups/hosts ,
+each one a byte for byte copy with a sidecar of metadata beside it.
+The copy is deliberately plain, so that in an emergency the file can be put
+back with
+.BR cp (1)
+knowing nothing about this program.
+.PP
+The sidecar records the absolute path the backup was taken from, and
+.B restore
+refuses when that is not the file it is about to write.
+Without that check a backup taken with
+.B \-\-file
+from a scratch file could later be written over
+.IR /etc/hosts .
+The sidecar also records a SHA-256 of the copy, which
+.B restore
+verifies, and which is what tells an unchanged file from a changed one when
+deciding whether a new backup is worth taking.
+.SH ENVIRONMENT
+.TP
+.B HOSTS_BACKUP_DIR
+Where backups are kept.
+Defaults to
+.IR /var/backups/hosts .
+.TP
+.B HOSTS_KEEP_BACKUPS
+How many backups to keep per file.
+Defaults to 20.
+The most recent is never removed, whatever this says.
 .SH FILES
 .TP
 .I /etc/hosts
 The static table of hostname to address mappings, and the default target of
 every command.
+.TP
+.I /var/backups/hosts
+The backup store, one directory per target file.
 .SH EXIT STATUS
 Exit codes are part of the public interface and keep their meaning for the
 whole 1.x release line.
@@ -181,7 +291,19 @@ Invalid input, or
 found errors.
 .TP
 .B 5
-The requested hostname is not in the file.
+The requested hostname or backup is not there.
+.TP
+.B 6
+Refused because
+.B \-\-force
+was not given.
+.TP
+.B 7
+The write was abandoned because the result could not be trusted, and nothing
+was written.
+.TP
+.B 8
+The operation was not confirmed.
 .SH EXAMPLES
 List every entry, then only the ones under a domain:
 .PP
@@ -205,6 +327,17 @@ Lint a candidate file in continuous integration, failing on warnings too:
 .RS
 .EX
 hosts \-\-file ./hosts.new check \-\-strict
+.EE
+.RE
+.PP
+Keep a copy before editing by hand, see what changed, and go back:
+.PP
+.RS
+.EX
+sudo hosts backup
+$EDITOR /etc/hosts
+hosts diff
+sudo hosts restore \-\-yes
 .EE
 .RE
 .SH SEE ALSO
