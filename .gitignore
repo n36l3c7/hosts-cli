@@ -1,0 +1,3 @@
+# Build output: the shipped script and man page are assembled by "make build"
+# and attached to releases, never committed.
+/build/

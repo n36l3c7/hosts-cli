@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>hosts - changelog</title>
+    <meta name="description" content="Release notes for the hosts command." />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Changelog</h1>
+      <p class="tagline">Release notes for the hosts command.</p>
+      <nav>
+        <a href="index.html">Documentation</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="https://github.com/n36l3c7/hosts-cli">Source</a>
+      </nav>
+    </header>
+
+    <main>
+      <p>
+        The format is based on
+        <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and
+        the project adheres to
+        <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
+      </p>
+
+      <h2 id="v0-0-1">0.0.1 &mdash; 2026-07-26</h2>
+      <p>
+        Scaffolding release: build, packaging, documentation and continuous
+        integration, with no entry management command yet.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          Build system assembling the modules in <code>src/</code> into a single
+          self-contained <code>build/hosts</code> script, with the version
+          injected from the <code>VERSION</code> file.
+        </li>
+        <li>
+          <code>Makefile</code> with <code>build</code>, <code>install</code>,
+          <code>uninstall</code>, <code>lint</code>, <code>test</code>,
+          <code>clean</code> and <code>help</code> targets, honouring
+          <code>PREFIX</code> and <code>DESTDIR</code>.
+        </li>
+        <li>
+          <code>--help</code> and <code>--version</code>, and the first two
+          entries of the exit code contract: <code>0</code> for success and
+          <code>2</code> for a usage error.
+        </li>
+        <li>
+          Man page <code>hosts(1)</code>, generated from
+          <code>man/hosts.1.in</code> and installed by
+          <code>make install</code>.
+        </li>
+        <li>
+          Test suite based on bats, covering the command line surface and the
+          build artifacts, run against the built script.
+        </li>
+        <li>
+          Continuous integration on GitHub Actions: <code>shellcheck</code> on
+          the assembled script and <code>mandoc -T lint</code> on the man page,
+          plus the bats suite.
+        </li>
+        <li>Documentation site under <code>docs/</code>, published with GitHub Pages.</li>
+        <li>README, changelog and MIT licence.</li>
+      </ul>
+    </main>
+
+    <footer>
+      <p>
+        hosts 0.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        Gervasio.
+      </p>
+    </footer>
+  </body>
+</html>

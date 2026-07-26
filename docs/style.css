@@ -1,0 +1,137 @@
+/* hosts-cli documentation site. Single hand-written stylesheet, no external
+   assets, no fonts loaded from third parties, no trackers. */
+
+:root {
+  --bg: #ffffff;
+  --fg: #1c1f24;
+  --muted: #5a6270;
+  --rule: #e2e5ea;
+  --accent: #1b5fa8;
+  --code-bg: #f5f6f8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c;
+    --fg: #e6e8ec;
+    --muted: #9aa3b0;
+    --rule: #2b3038;
+    --accent: #79b1ef;
+    --code-bg: #1d2128;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 46rem;
+  padding: 2.5rem 1.25rem 4rem;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+header {
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+}
+
+header p.tagline {
+  color: var(--muted);
+  margin: 0.25rem 0 1rem;
+}
+
+nav a {
+  margin-right: 1.25rem;
+}
+
+h1 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+h2 {
+  border-bottom: 1px solid var(--rule);
+  font-size: 1.35rem;
+  margin-top: 2.75rem;
+  padding-bottom: 0.3rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+  margin-top: 1.75rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+code,
+pre {
+  font-family: ui-monospace, "Cascadia Code", Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--code-bg);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  line-height: 1.5;
+  overflow-x: auto;
+  padding: 0.85rem 1rem;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+table {
+  border-collapse: collapse;
+  display: block;
+  margin: 1rem 0;
+  overflow-x: auto;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.5rem 0.9rem 0.5rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+blockquote {
+  border-left: 3px solid var(--rule);
+  color: var(--muted);
+  margin: 1.25rem 0;
+  padding: 0.1rem 0 0.1rem 1rem;
+}
+
+footer {
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+}

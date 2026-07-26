@@ -1,0 +1,57 @@
+.TH HOSTS 1 2026-07-26 "hosts @VERSION@" "User Commands"
+.SH NAME
+hosts \- a safe command\-line manager for /etc/hosts
+.SH SYNOPSIS
+.B hosts
+.I command
+.RI [ options ]
+.br
+.B hosts
+.BR \-h | \-\-help
+.br
+.B hosts
+.BR \-V | \-\-version
+.SH DESCRIPTION
+.B hosts
+manages the entries of the system hosts file without opening it in an
+editor.
+The hosts file is critical for name resolution, so every write is performed
+on a temporary file in the same directory, validated, and then moved into
+place with an atomic rename, preserving owner, group and permissions.
+.PP
+This release provides the packaging and build scaffolding only.
+No entry management command is implemented yet.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.BR \-V ", " \-\-version
+Show the program version and exit.
+.SH FILES
+.TP
+.I /etc/hosts
+The static table of hostname to IP address mappings that
+.B hosts
+is designed to manage.
+.SH EXIT STATUS
+Exit codes are part of the public interface and keep their meaning for the
+whole 1.x release line.
+Values greater than or equal to 64 are reserved and never returned.
+.TP
+.B 0
+Success, including an idempotent operation that changed nothing.
+.TP
+.B 2
+Usage error: unknown command, unknown option, or a missing argument.
+.SH SEE ALSO
+.BR hosts (5),
+.BR hostname (7),
+.BR getent (1)
+.PP
+Full documentation is available on
+.UR https://n36l3c7.github.io/hosts-cli/
+the project website
+.UE .
+.SH AUTHORS
+Samuele Gervasio

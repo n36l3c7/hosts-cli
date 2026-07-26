@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>hosts - a safe command-line manager for /etc/hosts</title>
+    <meta
+      name="description"
+      content="hosts is a Bash command-line tool that manages /etc/hosts with
+               atomic writes, automatic backups and validation."
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>hosts</h1>
+      <p class="tagline">A safe command-line manager for /etc/hosts.</p>
+      <nav>
+        <a href="index.html">Documentation</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="https://github.com/n36l3c7/hosts-cli">Source</a>
+      </nav>
+    </header>
+
+    <main>
+      <h2 id="overview">Overview</h2>
+      <p>
+        <code>/etc/hosts</code> is small enough that everyone edits it by hand,
+        and critical enough that a corrupted write breaks name resolution on the
+        whole machine. <code>hosts</code> makes the common operations immediate
+        without giving up safety.
+      </p>
+      <ul>
+        <li>
+          Every write goes to a temporary file in the same directory, is
+          validated, and is then moved into place with an atomic rename.
+        </li>
+        <li>
+          Owner, group and permissions of the original file are preserved.
+        </li>
+        <li>
+          An automatic, rotated backup is taken before every mutation, so any
+          change can be rolled back.
+        </li>
+        <li>
+          Input is validated before anything touches the file, and invalid input
+          is rejected with a dedicated exit code.
+        </li>
+        <li>Read commands never require root.</li>
+      </ul>
+
+      <h2 id="status">Status</h2>
+      <blockquote>
+        <p>
+          This is the <code>0.0.1</code> scaffolding release. Build, packaging,
+          documentation and continuous integration are in place, but no entry
+          management command is implemented yet: only <code>--help</code> and
+          <code>--version</code> do anything.
+        </p>
+      </blockquote>
+      <p>The command surface is delivered one wave at a time.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Wave</th>
+            <th>Commands</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>ls</code>, <code>get</code>, <code>search</code>,
+              <code>check</code>, <code>export</code></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>backup</code>, <code>backup ls</code>,
+              <code>restore</code>, <code>diff</code></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>add</code>, <code>rm</code>, <code>on</code>,
+              <code>off</code></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>edit</code>, <code>import</code>, <code>block</code></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>profile save</code>, <code>profile load</code>,
+              <code>profile ls</code>, <code>profile rm</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><code>flush</code>, shell completions</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="requirements">Requirements</h2>
+      <ul>
+        <li>Linux with GNU coreutils.</li>
+        <li>
+          Bash 4.4 or newer. The program refuses to run on anything older.
+        </li>
+        <li>
+          <code>diff</code>, from diffutils, for the <code>diff</code> command
+          only, once it lands.
+        </li>
+      </ul>
+      <p>
+        There is no other runtime dependency: no <code>jq</code>, no Python, no
+        external libraries.
+      </p>
+
+      <h2 id="installation">Installation</h2>
+      <pre><code>git clone https://github.com/n36l3c7/hosts-cli.git
+cd hosts-cli
+sudo make install</code></pre>
+      <p>
+        This installs the script to <code>/usr/local/bin/hosts</code> and the
+        man page to <code>/usr/local/share/man/man1/hosts.1</code>. Override the
+        destination with <code>PREFIX</code> or <code>DESTDIR</code>:
+      </p>
+      <pre><code>make install PREFIX="$HOME/.local"</code></pre>
+      <p>To remove it:</p>
+      <pre><code>sudo make uninstall</code></pre>
+
+      <h2 id="usage">Usage</h2>
+      <pre><code>hosts --version
+hosts --help
+man hosts</code></pre>
+
+      <h2 id="configuration">Configuration</h2>
+      <p>
+        None yet. Configuration will be introduced together with the commands
+        that need it, through environment variables
+        (<code>HOSTS_BACKUP_DIR</code>, <code>HOSTS_KEEP_BACKUPS</code>) and the
+        global <code>--file</code> flag.
+      </p>
+
+      <h2 id="reference">Command line reference</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Option</th>
+            <th>Effect</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>-h</code>, <code>--help</code></td>
+            <td>Show a usage summary on standard output and exit.</td>
+          </tr>
+          <tr>
+            <td><code>-V</code>, <code>--version</code></td>
+            <td>Show the program version on standard output and exit.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The same reference is available offline as the
+        <code>hosts(1)</code> man page.
+      </p>
+
+      <h3 id="exit-codes">Exit codes</h3>
+      <p>
+        Exit codes are part of the public interface: a value keeps its meaning
+        for the whole <code>1.x</code> line. Values greater than or equal to 64
+        are reserved and never returned. Codes are documented here as the
+        commands that raise them land.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>0</code></td>
+            <td>
+              Success, including an idempotent operation that changed nothing.
+            </td>
+          </tr>
+          <tr>
+            <td><code>2</code></td>
+            <td>
+              Usage error: unknown command, unknown option, or a missing
+              argument.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="development">Development</h2>
+      <p>
+        The shipped program is a single self-contained script assembled from the
+        modules in <code>src/</code>, so development stays modular while
+        distribution stays a matter of copying one file. Never edit
+        <code>build/hosts</code> directly.
+      </p>
+      <pre><code>make build      # assemble build/hosts and build/hosts.1
+make lint       # shellcheck on the script, mandoc on the man page
+make test       # bats suite, run against the built script
+make clean</code></pre>
+      <p>The toolchain is shellcheck, mandoc and bats:</p>
+      <pre><code>sudo apt-get install shellcheck mandoc bats</code></pre>
+      <p>
+        The test suite always runs against the built script and against fixture
+        files passed with <code>--file</code>. It never requires root and never
+        touches the real <code>/etc/hosts</code>.
+      </p>
+    </main>
+
+    <footer>
+      <p>
+        hosts 0.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        Gervasio.
+      </p>
+    </footer>
+  </body>
+</html>
