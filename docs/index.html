@@ -51,8 +51,8 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>0.3.0</code>: reading, backups and editing entries are
-        complete and tested.
+        This is <code>0.4.0</code>: every command in the plan except profiles,
+        <code>flush</code> and shell completions.
       </p>
       <table>
         <thead>
@@ -84,13 +84,13 @@
           <tr>
             <td>4</td>
             <td><code>edit</code>, <code>import</code>, <code>block</code></td>
-            <td>next</td>
+            <td>released in 0.4.0</td>
           </tr>
           <tr>
             <td>5</td>
             <td><code>profile save</code>, <code>profile load</code>,
               <code>profile ls</code>, <code>profile rm</code></td>
-            <td>planned</td>
+            <td>next</td>
           </tr>
           <tr>
             <td>6</td>
@@ -234,6 +234,29 @@ man hosts</code></pre>
             <td>
               Comment out every active entry carrying the name, keeping the
               line so <code>on</code> can bring it back.
+            </td>
+          </tr>
+          <tr>
+            <td><code>edit</code></td>
+            <td>
+              Open the file in an editor, check what comes back, and install it
+              atomically after taking a backup. The editor works on a copy, so
+              the file is never left half written.
+            </td>
+          </tr>
+          <tr>
+            <td><code>import [file]</code></td>
+            <td>
+              Merge entries from a file, or from standard input. The source is
+              checked before anything is written, and one bad line makes the
+              whole import fail.
+            </td>
+          </tr>
+          <tr>
+            <td><code>block &lt;domain&gt;...</code></td>
+            <td>
+              Point domains at a sinkhole address. With no argument the domains
+              are read from standard input, one per line.
             </td>
           </tr>
           <tr>
@@ -615,6 +638,85 @@ man hosts</code></pre>
         line byte for byte.
       </p>
 
+      <h2 id="blocking">Blocking domains</h2>
+      <p>
+        <code>block</code> points domains at a sinkhole address. Both
+        <code>0.0.0.0</code> and <code>::</code> are used unless
+        <code>--ipv4-only</code> says otherwise: on a machine with IPv6, a block
+        that only covers IPv4 blocks nothing at all, which is the mistake most
+        blocklist tools make. With no arguments the domains are read from
+        standard input, one per line, since a real blocklist does not fit on a
+        command line.
+      </p>
+      <p>Blocked domains live together at the end of the file:</p>
+      <pre><code># &gt;&gt;&gt; hosts block &gt;&gt;&gt;
+# Managed by hosts(1): change it with "hosts block" and "hosts rm".
+0.0.0.0	ads.example.com
+::	ads.example.com
+# &lt;&lt;&lt; hosts block &lt;&lt;&lt;</code></pre>
+      <p>
+        Marking the section off lets a blocklist of tens of thousands of
+        machine-written lines be treated as one thing. <code>ls</code> leaves it
+        out unless you pass <code>--blocked</code>, so the handful of entries you
+        actually maintain are not buried under it, and <code>check</code> does
+        not compare its lines with each other, since near-identical generated
+        names would be nothing but noise. The per-line rules still apply, and
+        <code>get</code>, <code>search</code> and <code>rm</code> treat what is
+        inside exactly as they treat anything else. Nothing about the section is
+        magic, and the markers go away with the last entry in it.
+      </p>
+      <p>
+        A domain that already has an entry outside the section is skipped with a
+        warning rather than making the whole command fail. That is deliberately
+        unlike <code>add</code>, which refuses: a command handed many domains
+        should not give up at the first obstacle.
+      </p>
+
+      <h3 id="blocklist-cost">What a blocklist costs</h3>
+      <p>
+        Measured on a file of 50,003 lines, against a typical
+        <code>/etc/hosts</code> of three:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>typical file</th>
+            <th>50,003 lines</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ls</code></td>
+            <td>29 ms</td>
+            <td>11.1 s</td>
+          </tr>
+          <tr>
+            <td><code>get</code></td>
+            <td>29 ms</td>
+            <td>9.7 s</td>
+          </tr>
+          <tr>
+            <td><code>check</code></td>
+            <td>30 ms</td>
+            <td>14.0 s</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Blocking 25,000 domains in one pass takes 2.8 s, so the bulk operation
+        itself is not the problem. The problem is that afterwards the file
+        <em>is</em> that big, and every command pays for reading it,
+        <code>ls</code> included even though it does not show the section. Bash
+        costs roughly 200 &micro;s per line whatever the parser does.
+      </p>
+      <p>
+        This is a known limit, not a surprise, and the fix is a change of
+        strategy rather than tuning, so it is not bolted on here. If you keep a
+        large blocklist in <code>/etc/hosts</code>, a dedicated DNS-level
+        blocker will serve you better today.
+      </p>
+
       <h2 id="writing">Writing</h2>
       <p>
         Every change goes to a temporary file in the directory of the target, is
@@ -777,7 +879,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 0.3.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.4.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

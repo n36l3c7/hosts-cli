@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,15 +28,16 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `0.3.0`: reading, backups and editing entries are complete and tested.
+This is `0.4.0`: every command in the plan except profiles, `flush` and shell
+completions.
 
 | Wave | Commands | Status |
 | --- | --- | --- |
 | 1 | `ls`, `get`, `search`, `check`, `export` | released in 0.1.0 |
 | 2 | `backup`, `backup ls`, `restore`, `diff` | released in 0.2.0 |
 | 3 | `add`, `rm`, `on`, `off` | released in 0.3.0 |
-| 4 | `edit`, `import`, `block` | next |
-| 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | planned |
+| 4 | `edit`, `import`, `block` | released in 0.4.0 |
+| 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | next |
 | 6 | `flush`, shell completions | planned |
 
 ## Requirements
@@ -90,10 +91,12 @@ sudo hosts off staging            # keep the line, stop it resolving
 sudo hosts on staging             # and bring it back
 sudo hosts rm staging
 
-sudo hosts backup                 # keep a copy before editing by hand
-$EDITOR /etc/hosts
-hosts diff                        # see what changed since that copy
+sudo hosts edit                   # $EDITOR, checked on the way back in
+hosts diff                        # see what changed since the last backup
 sudo hosts restore --yes          # and go back
+
+curl -s https://example.com/domains.txt | sudo hosts block --yes
+hosts ls --blocked | wc -l
 
 man hosts
 ```
@@ -111,6 +114,9 @@ man hosts
 | `rm <name\|ip>` | remove a name, or every entry for an address |
 | `on <name>` | enable the entries carrying a name |
 | `off <name>` | disable them without deleting them |
+| `edit` | open the file in `$EDITOR` and check it on the way back |
+| `import [file]` | merge entries from a file, or from stdin |
+| `block <domain>...` | point domains at a sinkhole address |
 | `backup` | take a backup of the file |
 | `backup ls` | list the backups already taken |
 | `restore [id]` | put a backup back in place, the most recent by default |
@@ -126,6 +132,7 @@ Accepted before and after the command name.
 | --- | --- |
 | `--file <path>` | operate on a file other than `/etc/hosts` |
 | `--json` | machine-readable output |
+| `--blocked` | `ls` only: include the entries inside the block section |
 | `--dry-run` | show what would happen, write nothing |
 | `--no-backup` | skip the automatic backup, which is a bad idea |
 | `--force` | go ahead with something that would otherwise be refused |
@@ -256,6 +263,57 @@ becomes
 
 and not `10.0.0.5<TAB>staging # staging box`. `off` followed by `on` gives back
 the original line byte for byte.
+
+## Blocking domains
+
+`block` points domains at a sinkhole address. Both `0.0.0.0` and `::` are used
+unless `--ipv4-only` says otherwise: on a machine with IPv6, a block that only
+covers IPv4 blocks nothing at all, which is the mistake most blocklist tools
+make. With no arguments the domains are read from stdin, one per line, since a
+real blocklist does not fit on a command line.
+
+Blocked domains live together at the end of the file:
+
+```
+# >>> hosts block >>>
+# Managed by hosts(1): change it with "hosts block" and "hosts rm".
+0.0.0.0	ads.example.com
+::	ads.example.com
+# <<< hosts block <<<
+```
+
+Marking the section off lets a blocklist of tens of thousands of machine-written
+lines be treated as one thing. `ls` leaves it out unless you pass `--blocked`,
+so the handful of entries you actually maintain are not buried under it, and
+`check` does not compare its lines with each other, since near-identical
+generated names would be nothing but noise. The per-line rules still apply,
+and `get`, `search` and `rm` treat what is inside exactly as they treat
+anything else. Nothing about the section is magic, and the markers go away
+with the last entry in it.
+
+A domain that already has an entry outside the section is skipped with a
+warning rather than making the whole command fail. That is deliberately unlike
+`add`, which refuses: a command handed many domains should not give up at the
+first obstacle.
+
+### What a blocklist costs
+
+Measured on a file of 50,003 lines, against a typical `/etc/hosts` of three:
+
+| | typical file | 50,003 lines |
+| --- | --- | --- |
+| `ls` | 29 ms | 11.1 s |
+| `get` | 29 ms | 9.7 s |
+| `check` | 30 ms | 14.0 s |
+
+Blocking 25,000 domains in one pass takes 2.8 s, so the bulk operation itself
+is not the problem. The problem is that afterwards the file *is* that big, and
+every command pays for reading it, `ls` included even though it does not show
+the section. Bash costs roughly 200 µs per line whatever the parser does.
+
+This is a known limit, not a surprise, and the fix is a change of strategy
+rather than tuning, so it is not bolted on here. If you keep a large blocklist
+in `/etc/hosts`, a dedicated DNS-level blocker will serve you better today.
 
 ## Writing
 

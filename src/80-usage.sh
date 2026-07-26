@@ -21,6 +21,9 @@ Editing:
   rm <name|ip>        remove a name, or every entry for an address
   on <name>           enable the entries carrying a name
   off <name>          disable them without deleting them
+  edit                open the file in \$EDITOR and check it on the way back
+  import [file]       merge entries from a file, or from standard input
+  block <domain>...   point domains at a sinkhole address
 
 Backups:
   backup              take a backup of the file
@@ -67,9 +70,15 @@ List the entries of the file. With a pattern, only entries with a name
 matching that shell glob are listed; matching ignores case. Quote the pattern
 so that the shell does not expand it first.
 
+Entries inside the block section are left out unless --blocked is given. A
+blocklist is thousands of machine written lines, and showing it by default
+would bury the handful of entries you actually maintain. '$PROGRAM_NAME search'
+still finds them and '$PROGRAM_NAME get' still resolves them.
+
 Options:
   -a, --all       list active and disabled entries
       --disabled  list only disabled entries
+      --blocked   include the entries inside the block section
   -h, --help      show this help
 
 Output is four tab separated fields, always in this order and always this
@@ -253,6 +262,97 @@ Options:
       --dry-run   show the change and write nothing
   -y, --yes       do not ask for confirmation
   -h, --help      show this help
+EOF
+}
+
+help_edit() {
+  cat <<EOF
+Usage: $PROGRAM_NAME edit [options]
+
+Open the file in an editor, check what comes back, and install it atomically
+after taking a backup. The editor works on a copy, so the file is never left
+half written.
+
+Errors stop the file being installed; warnings are printed and let through,
+the same judgement '$PROGRAM_NAME check' makes without --strict.
+
+Your work is never thrown away. When the edited file has errors and there is a
+terminal, the editor opens again with the findings shown, the way visudo does
+it; without a terminal there is nobody to ask, so the file is left as it was
+and the path of your copy is printed.
+
+The editor is \$VISUAL, then \$EDITOR, then vi. It runs with the locale you
+had: this program sets LC_ALL=C for its own parsing, which would be the wrong
+thing to hand to an editor.
+
+Options:
+  -h, --help      show this help
+EOF
+}
+
+help_import() {
+  cat <<EOF
+Usage: $PROGRAM_NAME import [options] [file]
+
+Merge entries from a file, or from standard input when no file is given or the
+file is -. The format is that of a hosts file.
+
+The source is checked before anything is written, and one bad line makes the
+whole import fail: importing half of a broken file leaves a machine in a state
+nobody can explain later.
+
+Only active entries are taken; a commented out line in someone else's file is
+a note to themselves. An entry is taken or left as a whole. One whose names
+all point at the same address already is counted as present, one whose names
+are entirely new is added at the end of the file with its comment, and
+anything in between is left alone and reported, because a line half imported
+would put a name on two lines at once.
+
+Options:
+      --dry-run   show the change and write nothing
+  -y, --yes       do not ask for confirmation
+  -h, --help      show this help
+
+Examples:
+  $PROGRAM_NAME import ./hosts.extra
+  curl -s https://example.com/hosts | sudo $PROGRAM_NAME import
+EOF
+}
+
+help_block() {
+  cat <<EOF
+Usage: $PROGRAM_NAME block [options] <domain>...
+
+Point domains at a sinkhole address, so that they stop resolving.
+
+Both $DEFAULT_BLOCK_ADDRESS_V4 and $DEFAULT_BLOCK_ADDRESS_V6 are used unless
+--ipv4-only says otherwise: on a machine with IPv6 a block that only covers
+IPv4 blocks nothing at all, which is the mistake most blocklist tools make.
+
+Blocked domains are kept in a section of their own at the end of the file:
+
+  $BLOCK_SECTION_OPEN
+  $BLOCK_SECTION_NOTE
+  $DEFAULT_BLOCK_ADDRESS_V4$(printf '\t')ads.example.com
+  $DEFAULT_BLOCK_ADDRESS_V6$(printf '\t')ads.example.com
+  $BLOCK_SECTION_CLOSE
+
+Marking it off means a blocklist of tens of thousands of lines can be treated
+as one thing: '$PROGRAM_NAME ls' leaves it out, and '$PROGRAM_NAME check' does
+not compare its lines with each other. Nothing about it is magic, so
+'$PROGRAM_NAME rm' unblocks a domain like any other entry.
+
+A domain that already has an entry outside the section is skipped with a
+warning rather than making the whole command fail, because a command given
+many domains should not give up at the first obstacle. This is deliberately
+unlike '$PROGRAM_NAME add', which refuses.
+
+Options:
+      --ipv4-only  use only $DEFAULT_BLOCK_ADDRESS_V4
+      --to <addr>  use this address instead of the two defaults
+      --dry-run    show the change and write nothing
+  -y, --yes        do not ask for confirmation
+  -h, --help       show this help
 EOF
 }
 

@@ -26,4 +26,9 @@ fi
 # on every machine: in some locales [A-Za-z] is collation based and matches
 # characters that are not ASCII letters, which would let an invalid hostname
 # through validation.
+#
+# The setting is right for parsing and wrong for a program run on the user's
+# behalf, so what was there is kept and given back to the editor that "hosts
+# edit" starts.
+HOSTS_ORIGINAL_LC_ALL=${LC_ALL:-}
 export LC_ALL=C

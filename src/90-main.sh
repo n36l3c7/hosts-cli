@@ -121,6 +121,9 @@ main() {
     rm) cmd_rm "${rest[@]}" || status=$? ;;
     on) cmd_on "${rest[@]}" || status=$? ;;
     off) cmd_off "${rest[@]}" || status=$? ;;
+    block) cmd_block "${rest[@]}" || status=$? ;;
+    import) cmd_import "${rest[@]}" || status=$? ;;
+    edit) cmd_edit "${rest[@]}" || status=$? ;;
     *) die_usage '' "unknown command: $command" ;;
   esac
 

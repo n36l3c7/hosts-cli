@@ -81,6 +81,11 @@ _check_scan() {
     # conflict with anything.
     ((_hf_enabled[index])) || continue
 
+    # Nor do they look inside the block section. Thousands of near identical
+    # names written by a script would produce nothing but noise; the per line
+    # rules above still apply to them.
+    ((!_hf_in_block[index])) || continue
+
     for name in "${RECORD_NAMES[@]}"; do
       if [[ ${name,,} == 'localhost' ]]; then
         [[ ${_hf_ip[index]} != '127.0.0.1' ]] || has_loopback4=1

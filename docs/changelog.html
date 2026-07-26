@@ -26,6 +26,61 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-4-0">0.4.0 &mdash; 2026-07-27</h2>
+      <p><code>edit</code>, <code>import</code> and <code>block</code>.</p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>edit</code>, opening the file in an editor and checking what
+          comes back. Errors stop it being installed and warnings do not. The
+          work is never thrown away: with a terminal the editor opens again with
+          the findings shown, the way <code>visudo</code> does it, and without
+          one the path of the copy is printed.
+        </li>
+        <li>
+          <code>import</code>, merging entries from a file or from standard
+          input. The source is checked before anything is written, and one bad
+          line makes the whole import fail. An entry is taken or left as a
+          whole.
+        </li>
+        <li>
+          <code>block</code>, pointing domains at a sinkhole address, with the
+          domains read from standard input when none are given. Both
+          <code>0.0.0.0</code> and <code>::</code> are used unless
+          <code>--ipv4-only</code> says otherwise, because on a machine with
+          IPv6 a block that only covers IPv4 blocks nothing at all.
+          <code>--to</code> names another address.
+        </li>
+        <li>
+          A marked-off section holding blocked domains, so that a blocklist of
+          tens of thousands of machine written lines can be treated as one
+          thing. Its markers go away with the last entry in it.
+        </li>
+        <li>
+          <code>ls --blocked</code>, to include the entries inside that section.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          <code>ls</code> leaves the block section out by default, so that the
+          entries someone actually maintains are not buried under a generated
+          list. <code>get</code> still resolves what is in it and
+          <code>search</code> still finds it.
+        </li>
+        <li>
+          <code>check</code> no longer compares the lines inside the block
+          section with each other, since near identical generated names would
+          produce nothing but noise. The per line rules still apply to them.
+        </li>
+        <li>
+          The editor started by <code>edit</code> runs with the locale the user
+          had. The program sets <code>LC_ALL=C</code> for its own parsing, which
+          is the wrong thing to hand to an editor about to be shown someone
+          else's text.
+        </li>
+      </ul>
+
       <h2 id="v0-3-0">0.3.0 &mdash; 2026-07-27</h2>
       <p>
         Editing entries: <code>add</code>, <code>rm</code>, <code>on</code> and
@@ -254,7 +309,7 @@
 
     <footer>
       <p>
-        hosts 0.3.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.4.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

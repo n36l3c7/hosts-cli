@@ -10,12 +10,16 @@
 
 declare -A EDIT_REPLACE=()
 declare -A EDIT_DELETE=()
+declare -A EDIT_INSERT=()
 declare -a EDIT_APPEND=()
+EDIT_INSERTED=0
 
 edit_reset() {
   EDIT_REPLACE=()
   EDIT_DELETE=()
+  EDIT_INSERT=()
   EDIT_APPEND=()
+  EDIT_INSERTED=0
 }
 
 edit_replace() {
@@ -30,14 +34,30 @@ edit_append() {
   EDIT_APPEND+=("$1")
 }
 
+# Put a line before the one at the given index. Several lines can be queued
+# for the same place and come out in the order they were added.
+edit_insert_before() {
+  local -i index=$1
+  local text=$2
+
+  if [[ -n ${EDIT_INSERT[$index]:-} ]]; then
+    EDIT_INSERT[$index]+=$'\n'$text
+  else
+    EDIT_INSERT[$index]=$text
+  fi
+  EDIT_INSERTED=$((EDIT_INSERTED + 1))
+}
+
 # How many lines of the file the change touches. Used to decide whether an
 # operation is narrow enough to go ahead without asking.
 edit_touched() {
-  printf '%s' "$((${#EDIT_REPLACE[@]} + ${#EDIT_DELETE[@]} + ${#EDIT_APPEND[@]}))"
+  printf '%s' "$((${#EDIT_REPLACE[@]} + ${#EDIT_DELETE[@]} +
+    ${#EDIT_APPEND[@]} + EDIT_INSERTED))"
 }
 
 edit_is_empty() {
-  ((${#EDIT_REPLACE[@]} + ${#EDIT_DELETE[@]} + ${#EDIT_APPEND[@]} == 0))
+  ((${#EDIT_REPLACE[@]} + ${#EDIT_DELETE[@]} +
+    ${#EDIT_APPEND[@]} + EDIT_INSERTED == 0))
 }
 
 # Write the result of the change to a file.
@@ -58,6 +78,10 @@ edit_render() {
 
   {
     for ((i = 0; i < _hf_count; i++)); do
+      if [[ -n ${EDIT_INSERT[$i]:-} ]]; then
+        printf '%s\n' "${EDIT_INSERT[$i]}"
+      fi
+
       [[ -z ${EDIT_DELETE[$i]:-} ]] || continue
 
       if [[ -n ${EDIT_REPLACE[$i]+set} ]]; then
@@ -90,6 +114,8 @@ edit_commit() {
     info 'nothing to change'
     return "$EX_OK"
   fi
+
+  block_prune_if_empty
 
   touched=$(edit_touched)
 

@@ -33,6 +33,9 @@ or
 lists active and disabled entries,
 .B \-\-disabled
 only the disabled ones.
+Entries inside the block section are left out unless
+.B \-\-blocked
+is given.
 .RE
 .TP
 .BI "get " hostname
@@ -106,6 +109,52 @@ Comment out every active entry carrying the hostname, keeping the line so that
 can bring it back.
 Every line carrying the name is disabled, not just one: turning off half of a
 dual stack pair would leave the name resolving on the other family.
+.TP
+.B edit
+Open the file in an editor, check what comes back, and install it atomically
+after taking a backup.
+The editor works on a copy, so the file is never left half written.
+Errors stop it being installed, warnings are printed and let through.
+Your work is never thrown away: with a terminal the editor opens again with
+the findings shown, the way
+.BR visudo (8)
+does it, and without one the path of your copy is printed.
+The editor is
+.BR $VISUAL ,
+then
+.BR $EDITOR ,
+then
+.BR vi ,
+and it runs with the locale you had rather than the one this program sets for
+its own parsing.
+.TP
+.BI "import [" file ]
+Merge entries from a file, or from standard input when no file is given.
+The source is checked before anything is written, and one bad line makes the
+whole import fail.
+Only active entries are taken, and an entry is taken or left as a whole: one
+that only partly overlaps what is already there is left alone and reported,
+because a line half imported would put a name on two lines at once.
+.TP
+.BI "block " domain ...
+Point domains at a sinkhole address so that they stop resolving.
+With no argument the domains are read from standard input, one per line, since
+a real blocklist does not fit on a command line.
+Both
+.B 0.0.0.0
+and
+.B ::
+are used unless
+.B \-\-ipv4\-only
+says otherwise, or
+.BI \-\-to " address"
+names another one.
+A domain that already has an entry outside the section is skipped with a
+warning rather than making the whole command fail, deliberately unlike
+.BR add .
+See
+.B BLOCK SECTION
+below.
 .TP
 .B backup
 Take a backup of the file.
@@ -275,6 +324,34 @@ would have to guess whether a leftover lock belongs to a live process, and
 guessing wrong leaves the tool stuck for good: a worse outcome than the
 problem, because two concurrent writers can only lose an update, never damage
 the file.
+.SH BLOCK SECTION
+Blocked domains are kept together at the end of the file, between two markers:
+.PP
+.RS
+.EX
+# >>> hosts block >>>
+# Managed by hosts(1): change it with "hosts block" and "hosts rm".
+0.0.0.0	ads.example.com
+::	ads.example.com
+# <<< hosts block <<<
+.EE
+.RE
+.PP
+Marking the section off means a blocklist of tens of thousands of machine
+written lines can be treated as one thing.
+.B ls
+leaves it out unless asked, so that the handful of entries someone actually
+maintains are not buried under it, and
+.B check
+does not compare its lines with each other, since near identical names written
+by a script would produce nothing but noise.
+The per line rules still apply to it, and
+.BR get ,
+.B search
+and
+.B rm
+treat what is inside exactly as they treat anything else: nothing about the
+section is magic, and the markers go away with the last entry in it.
 .SH BACKUPS
 A backup is taken before every change unless
 .B \-\-no\-backup
@@ -395,9 +472,19 @@ Keep a copy before editing by hand, see what changed, and go back:
 .RS
 .EX
 sudo hosts backup
-$EDITOR /etc/hosts
+sudo hosts edit
 hosts diff
 sudo hosts restore \-\-yes
+.EE
+.RE
+.PP
+Load a downloaded blocklist, then see what is in it:
+.PP
+.RS
+.EX
+curl \-s https://example.com/domains.txt | sudo hosts block \-\-yes
+hosts ls \-\-blocked | wc \-l
+sudo hosts rm ads.example.com
 .EE
 .RE
 .SH SEE ALSO
