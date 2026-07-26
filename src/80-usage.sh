@@ -9,23 +9,32 @@ $PROGRAM_NAME - a safe command-line manager for /etc/hosts
 Usage:
   $PROGRAM_NAME [global options] <command> [arguments]
 
-Commands:
+Reading:
   ls [pattern]        list entries, optionally filtered by a glob on the names
   get <hostname>      print the addresses a hostname points at
   search <text>       find entries by address, name or comment
   check               lint the file
   export              write the file to stdout
 
+Backups:
+  backup              take a backup of the file
+  backup ls           list the backups already taken
+  restore [id]        put a backup back in place, the most recent by default
+  diff [id]           compare the file with a backup
+
 Global options:
   --file <path>       operate on a file other than $DEFAULT_HOSTS_FILE
   --json              machine readable output
+  --dry-run           show what would happen, write nothing
+  --no-backup         skip the automatic backup, which is a bad idea
+  --force             go ahead with something that would otherwise be refused
+  -y, --yes           answer yes to the confirmations
   -q, --quiet         silence diagnostics, never the data
   -v, --verbose       print diagnostics about what is being done
   -h, --help          show this help, or the help of a command
   -V, --version       show the version
 
-Every command accepts --help. This release is read only: no command writes to
-the file.
+Every command accepts --help. No command edits an entry yet.
 
 Exit codes:
   0  success
@@ -33,7 +42,10 @@ Exit codes:
   2  usage error
   3  insufficient permissions
   4  invalid input, or check found errors
-  5  the requested hostname is not in the file
+  5  the requested hostname or backup is not there
+  6  refused because --force was not given
+  7  write abandoned, the result could not be trusted
+  8  the operation was not confirmed
 EOF
 }
 
@@ -145,6 +157,81 @@ Usage: $PROGRAM_NAME export [options]
 Write the file to stdout. Without --json this reproduces it byte for byte,
 comments, blank lines and a missing final newline included. With --json it
 emits every line, entries and comments alike, as a structured document.
+
+Options:
+  -h, --help      show this help
+EOF
+}
+
+help_backup() {
+  cat <<EOF
+Usage: $PROGRAM_NAME backup [options]
+       $PROGRAM_NAME backup ls [options]
+
+Take a backup of the file, or list the backups already taken. Taking one only
+reads the file, so no privilege on it is needed; what is needed is somewhere
+to write the copy.
+
+A backup that would be identical to the most recent one is not taken, and the
+reason is said under --verbose. Without that, a run of writes that change
+nothing would push every backup that matters out of the rotation window.
+
+Backups live in one directory per target file under
+$(backup_root), each copy a byte for byte duplicate with a
+sidecar of metadata beside it. The copy is deliberately plain, so that in an
+emergency the file can be put back with cp. The sidecar records the path the
+backup came from, and restore refuses to write it anywhere else.
+
+The output of 'backup ls' is four tab separated fields, the most recent
+first:
+
+  index <TAB> id <TAB> time <TAB> bytes
+
+Environment:
+  HOSTS_BACKUP_DIR    where backups are kept (default $DEFAULT_BACKUP_ROOT)
+  HOSTS_KEEP_BACKUPS  how many to keep per file (default $DEFAULT_BACKUP_KEEP)
+
+Options:
+  -h, --help      show this help
+EOF
+}
+
+help_restore() {
+  cat <<EOF
+Usage: $PROGRAM_NAME restore [options] [id]
+
+Put a backup back in place. Without an argument the most recent one is used;
+otherwise give either the index shown by '$PROGRAM_NAME backup ls', where 1 is
+the most recent, or the identifier in full.
+
+Before anything is written the backup is checked against its own checksum, and
+against the path it was taken from: a backup made with --file from somewhere
+else is never written over this file. The current content is backed up first,
+so a restore can itself be undone.
+
+Only the content is restored. Ownership and permissions are those the file has
+now, not those it had when the backup was taken; the sidecar records the
+original ones for reference.
+
+Options:
+      --dry-run   show the difference and write nothing
+  -y, --yes       do not ask for confirmation
+  -h, --help      show this help
+EOF
+}
+
+help_diff() {
+  cat <<EOF
+Usage: $PROGRAM_NAME diff [options] [id]
+
+Compare the file with a backup, the most recent one by default. Removed lines
+are what the backup holds, added lines are what the file holds now.
+
+Exits with 0 whether or not there are differences; a non-zero status means the
+comparison could not be made.
+
+This is the one command that needs diff, from the diffutils package, and it
+says so plainly when it is missing rather than reimplementing it badly.
 
 Options:
   -h, --help      show this help

@@ -35,6 +35,33 @@ die() {
   exit "$code"
 }
 
+# Ask the user to confirm something that cannot be undone easily.
+#
+# Without a terminal there is nobody to ask, so the operation is refused
+# rather than assumed. The behaviour does depend on the environment, but only
+# ever in the safe direction: --yes is how a script says it means it.
+confirm() {
+  local question=$1 reply
+
+  if ((OPT_YES)); then
+    return 0
+  fi
+
+  if [[ ! -t 0 ]]; then
+    die "$EX_ABORTED" \
+      "$question: refusing to assume an answer without a terminal, pass --yes"
+  fi
+
+  printf '%s [y/N] ' "$question" >&2
+  IFS= read -r reply || reply=''
+
+  case ${reply,,} in
+    y | yes) return 0 ;;
+  esac
+
+  die "$EX_ABORTED" 'aborted'
+}
+
 # Report a usage error and point at the relevant help.
 die_usage() {
   local context=$1

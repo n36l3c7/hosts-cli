@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,14 +28,14 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `0.1.0`: the read-only commands are complete and tested. No command
-writes to the file yet.
+This is `0.2.0`: the read-only commands and the backup store are complete and
+tested. No command edits an entry yet.
 
 | Wave | Commands | Status |
 | --- | --- | --- |
 | 1 | `ls`, `get`, `search`, `check`, `export` | released in 0.1.0 |
-| 2 | `backup`, `backup ls`, `restore`, `diff` | next |
-| 3 | `add`, `rm`, `on`, `off` | planned |
+| 2 | `backup`, `backup ls`, `restore`, `diff` | released in 0.2.0 |
+| 3 | `add`, `rm`, `on`, `off` | next |
 | 4 | `edit`, `import`, `block` | planned |
 | 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | planned |
 | 6 | `flush`, shell completions | planned |
@@ -44,7 +44,13 @@ writes to the file yet.
 
 - Linux with GNU coreutils.
 - Bash 4.4 or newer. The program refuses to run on anything older.
-- `diff` (from diffutils) for the `diff` command only, once it lands.
+
+Two soft dependencies, neither of which stops the program working:
+
+- `diff`, from diffutils, for the `diff` command and for the preview shown by
+  `--dry-run`. Its absence is reported rather than worked around badly.
+- `flock`, from util-linux, to serialise concurrent writers. Without it writes
+  are not serialised, which can lose an update but cannot damage the file.
 
 No other runtime dependency: no `jq`, no Python, no external libraries.
 
@@ -79,6 +85,12 @@ hosts get staging                 # just the address, ready to capture
 hosts search "staging box"        # match on address, names or comments
 hosts check                       # lint the file
 hosts --file ./hosts.new check --strict
+
+sudo hosts backup                 # keep a copy before editing by hand
+$EDITOR /etc/hosts
+hosts diff                        # see what changed since that copy
+sudo hosts restore --yes          # and go back
+
 man hosts
 ```
 
@@ -91,6 +103,10 @@ man hosts
 | `search <text>` | find entries by address, name or comment |
 | `check` | lint the file |
 | `export` | write the file to stdout |
+| `backup` | take a backup of the file |
+| `backup ls` | list the backups already taken |
+| `restore [id]` | put a backup back in place, the most recent by default |
+| `diff [id]` | compare the file with a backup |
 
 Every command accepts `--help`.
 
@@ -102,10 +118,17 @@ Accepted before and after the command name.
 | --- | --- |
 | `--file <path>` | operate on a file other than `/etc/hosts` |
 | `--json` | machine-readable output |
+| `--dry-run` | show what would happen, write nothing |
+| `--no-backup` | skip the automatic backup, which is a bad idea |
+| `--force` | go ahead with something that would otherwise be refused |
+| `-y`, `--yes` | answer yes to the confirmations |
 | `-q`, `--quiet` | silence diagnostics, never the data |
 | `-v`, `--verbose` | print diagnostics on stderr |
 | `-h`, `--help` | show help, general or of a command |
 | `-V`, `--version` | show the version |
+
+A symbolic link given to `--file` is followed: the write lands where it points
+rather than replacing the link with a regular file.
 
 ### Output format
 
@@ -177,11 +200,79 @@ A commented line is read as a disabled entry when its fields look like one:
 an address, at most four names, and every name a plausible hostname. Prose
 that happens to start with an address stays a comment.
 
+## Writing
+
+Every change goes to a temporary file in the directory of the target, is
+validated, and is then moved into place with a rename. The kernel performs a
+rename within one filesystem atomically, so what is guaranteed is this:
+
+> After a change the file holds either the whole of the old content or the
+> whole of the new one, never a mixture. That holds through a crash or a power
+> cut.
+
+What is **not** guaranteed is that the new content survives a power cut in the
+moment right after the rename: Bash cannot call `fsync`, so the directory entry
+cannot be forced to disk. The failure mode of that is finding the old file —
+a lost change, never a damaged one. Saying so plainly is better than implying a
+durability the tool cannot deliver.
+
+Owner, group, permissions and SELinux context are carried over before the file
+is installed. The SELinux part is not decoration: a file created in `/etc`
+inherits `etc_t` by type transition while `/etc/hosts` is `net_conf_t`, and a
+rename keeps whatever context the new file has, so without copying it across a
+confined service on an enforcing system can stop resolving names.
+
+An extended ACL cannot be carried over by a rename, so a file that has one is
+refused with exit `6` unless `--force` is given. Losing an ACL changes who can
+read and write the file, which is too quiet a way to change a permission.
+
+Concurrent writers are serialised with `flock` when it is there, and not
+serialised when it is not. A lock built out of `mkdir` would have to guess
+whether a leftover lock belongs to a live process, and guessing wrong leaves
+the tool stuck for good — a worse outcome than the problem, since two
+concurrent writers can only lose an update, never damage the file.
+
+## Backups
+
+A backup is taken before every change, unless `--no-backup` says otherwise.
+Backups live in one directory per target file, each a byte-for-byte copy with a
+sidecar of metadata beside it:
+
+```
+target=/etc/hosts
+time=2026-07-27T12:34:56Z
+mode=644
+owner=root
+group=root
+sha256=6b604eae8902aea3b14f7b6d49f208116854a8a8c8ae33618a1ad8062462aca2
+```
+
+The copy is deliberately plain, so that in an emergency the file can be put
+back with `cp`, knowing nothing about this program.
+
+The sidecar is what makes restoring safe. It records the absolute path the
+backup came from, and `restore` refuses when that is not the file it is about
+to write: without that check, a backup taken with `--file` from a scratch file
+could later end up over `/etc/hosts`. The recorded SHA-256 is verified before
+anything is written, and is also what tells an unchanged file from a changed
+one — without which a run of writes that change nothing would push every backup
+that matters out of the rotation window.
+
+`restore` backs up the content it is about to replace, so a restore can itself
+be undone. Only the content is restored: ownership and permissions stay as they
+are now, and the sidecar keeps the original ones for reference.
+
 ## Configuration
 
-None yet. Configuration arrives with the commands that need it, through
-environment variables (`HOSTS_BACKUP_DIR`, `HOSTS_KEEP_BACKUPS`) and the
-global `--file` flag.
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `HOSTS_BACKUP_DIR` | `/var/backups/hosts` | where backups are kept |
+| `HOSTS_KEEP_BACKUPS` | `20` | how many to keep per file |
+
+The most recent backup is never removed, whatever `HOSTS_KEEP_BACKUPS` says.
+If the backup directory cannot be written, the command fails with exit `3` and
+names the variable to set, rather than quietly putting backups somewhere you
+would not think to look for them.
 
 ## Exit codes
 
@@ -194,12 +285,20 @@ returned.
 | `0` | Success, including an operation that changed nothing |
 | `1` | Generic error, such as a target file that is not there |
 | `2` | Usage error: unknown command, unknown option, missing argument |
-| `3` | Insufficient permissions to read the file |
+| `3` | Insufficient permissions to read the file or write where it lives |
 | `4` | Invalid input, or `check` found errors |
-| `5` | The requested hostname is not in the file |
+| `5` | The requested hostname or backup is not there |
+| `6` | Refused because `--force` was not given |
+| `7` | Write abandoned, the result could not be trusted, nothing was written |
+| `8` | The operation was not confirmed |
 
 A missing target file is `1` and not `5` on purpose: `get` uses `5` for a
 hostname that is absent, and a script must be able to tell the two apart.
+
+`8` covers both a declined prompt and a confirmation that could not be asked
+for. Without a terminal and without `--yes`, the answer is refused rather than
+assumed: the behaviour does depend on the environment, but only ever in the
+safe direction.
 
 ## JSON output
 

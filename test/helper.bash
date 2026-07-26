@@ -15,7 +15,37 @@ setup() {
   HOSTS_MAN="$REPO_ROOT/build/hosts.1"
   HOSTS_VERSION="$(cat "$REPO_ROOT/VERSION")"
   FIXTURE="$BATS_TEST_TMPDIR/hosts"
-  export REPO_ROOT HOSTS_BIN HOSTS_MAN HOSTS_VERSION FIXTURE
+
+  # Every test gets its own backup store inside its temporary directory, so
+  # that the suite can never write into /var/backups.
+  HOSTS_BACKUP_DIR="$BATS_TEST_TMPDIR/backups"
+
+  export REPO_ROOT HOSTS_BIN HOSTS_MAN HOSTS_VERSION FIXTURE HOSTS_BACKUP_DIR
+}
+
+# The directory the backups of the fixture end up in.
+fixture_backup_dir() {
+  local -a matches
+  shopt -s nullglob
+  matches=("$HOSTS_BACKUP_DIR"/*/)
+  shopt -u nullglob
+  printf '%s' "${matches[0]:-}"
+}
+
+# The sidecar of the most recent backup of the fixture.
+newest_meta() {
+  local -a matches
+  shopt -s nullglob
+  matches=("$(fixture_backup_dir)"hosts.*.meta)
+  shopt -u nullglob
+  printf '%s' "${matches[${#matches[@]} - 1]:-}"
+}
+
+# The copy of the most recent backup of the fixture.
+newest_copy() {
+  local meta
+  meta=$(newest_meta)
+  printf '%s' "${meta%.meta}.bak"
 }
 
 # Write the fixture file from standard input.
