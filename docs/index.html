@@ -51,8 +51,8 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>0.2.0</code>: the read-only commands and the backup store
-        are complete and tested. No command edits an entry yet.
+        This is <code>0.3.0</code>: reading, backups and editing entries are
+        complete and tested.
       </p>
       <table>
         <thead>
@@ -79,12 +79,12 @@
             <td>3</td>
             <td><code>add</code>, <code>rm</code>, <code>on</code>,
               <code>off</code></td>
-            <td>next</td>
+            <td>released in 0.3.0</td>
           </tr>
           <tr>
             <td>4</td>
             <td><code>edit</code>, <code>import</code>, <code>block</code></td>
-            <td>planned</td>
+            <td>next</td>
           </tr>
           <tr>
             <td>5</td>
@@ -146,6 +146,11 @@ hosts search "staging box"        # match on address, names or comments
 hosts check                       # lint the file
 hosts --file ./hosts.new check --strict
 
+sudo hosts add 10.0.0.5 staging staging.local
+sudo hosts off staging            # keep the line, stop it resolving
+sudo hosts on staging             # and bring it back
+sudo hosts rm staging
+
 sudo hosts backup                 # keep a copy before editing by hand
 $EDITOR /etc/hosts
 hosts diff                        # see what changed since that copy
@@ -200,6 +205,35 @@ man hosts</code></pre>
             <td>
               Write the file to stdout, byte for byte, or as a structured
               document with <code>--json</code>.
+            </td>
+          </tr>
+          <tr>
+            <td><code>add &lt;ip&gt; &lt;name&gt;...</code></td>
+            <td>
+              Point names at an address. Adding what is already there changes
+              nothing. A missing name joins the line that already carries the
+              others on the same address; names that are nowhere go on a new
+              line. Names spread over several lines are refused, because
+              merging them is your decision.
+            </td>
+          </tr>
+          <tr>
+            <td><code>rm &lt;name|ip&gt;</code></td>
+            <td>
+              Take a name off every line that carries it, dropping a line left
+              with nothing but its address, or remove every line pointing at an
+              address. Exits with 5 when nothing matches.
+            </td>
+          </tr>
+          <tr>
+            <td><code>on &lt;name&gt;</code></td>
+            <td>Enable every disabled entry carrying the name.</td>
+          </tr>
+          <tr>
+            <td><code>off &lt;name&gt;</code></td>
+            <td>
+              Comment out every active entry carrying the name, keeping the
+              line so <code>on</code> can bring it back.
             </td>
           </tr>
           <tr>
@@ -527,6 +561,60 @@ man hosts</code></pre>
         included, distinguished by <code>kind</code>.
       </p>
 
+      <h2 id="editing">Editing entries</h2>
+      <p>
+        <code>add</code> points names at an address, <code>rm</code> takes them
+        away, and <code>off</code> and <code>on</code> comment a line out and
+        back in without deleting it. Three rules are worth knowing because each
+        of them rejects the obvious answer.
+      </p>
+      <p>
+        <strong>The same name on IPv4 and IPv6 is never a clash.</strong>
+        <code>hosts add fd00::5 staging</code> when <code>10.0.0.5 staging</code>
+        exists is ordinary dual stack, not a conflict. A rule blind to the
+        address family would refuse the most ordinary operation there is on a
+        machine that has both.
+      </p>
+      <p>
+        <strong><code>off</code>, <code>on</code> and <code>rm</code> act on
+        every line carrying the name.</strong> Turning off half of a dual-stack
+        pair would leave the name resolving on the other family: a command doing
+        half its job. Refusing to choose would be worse still, because it would
+        fail on the correct hosts file of every Linux machine.
+      </p>
+      <p>
+        <strong>A name already pointing elsewhere is refused rather than
+        moved.</strong> <code>--force</code> moves it, and when the line carries
+        nothing but the names being added the address is changed in place, which
+        is both what updating means and the smallest possible diff. A disabled
+        entry for the name is refused too, since <code>hosts on</code> is
+        usually what was meant.
+      </p>
+      <p>
+        <code>rm</code> of something that is not there exits <code>5</code>. A
+        typo should not pass for success.
+      </p>
+
+      <h3 id="minimal-diffs">Minimal diffs</h3>
+      <p>
+        A change never rebuilds the file from what was parsed out of it. It says
+        which lines it replaces, which it deletes and what it appends, and every
+        other line is written back exactly as it was read. There is no path
+        through the code that could reformat a line nobody asked to touch.
+      </p>
+      <p>
+        Within a line the edit is surgical too. Removing an alias takes the
+        token and exactly one run of adjacent whitespace, so
+      </p>
+      <pre><code>10.0.0.5    staging   staging.local	# staging box</code></pre>
+      <p>becomes</p>
+      <pre><code>10.0.0.5    staging	# staging box</code></pre>
+      <p>
+        and not <code>10.0.0.5&lt;TAB&gt;staging # staging box</code>.
+        <code>off</code> followed by <code>on</code> gives back the original
+        line byte for byte.
+      </p>
+
       <h2 id="writing">Writing</h2>
       <p>
         Every change goes to a temporary file in the directory of the target, is
@@ -689,7 +777,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 0.2.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.3.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,15 +28,14 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `0.2.0`: the read-only commands and the backup store are complete and
-tested. No command edits an entry yet.
+This is `0.3.0`: reading, backups and editing entries are complete and tested.
 
 | Wave | Commands | Status |
 | --- | --- | --- |
 | 1 | `ls`, `get`, `search`, `check`, `export` | released in 0.1.0 |
 | 2 | `backup`, `backup ls`, `restore`, `diff` | released in 0.2.0 |
-| 3 | `add`, `rm`, `on`, `off` | next |
-| 4 | `edit`, `import`, `block` | planned |
+| 3 | `add`, `rm`, `on`, `off` | released in 0.3.0 |
+| 4 | `edit`, `import`, `block` | next |
 | 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | planned |
 | 6 | `flush`, shell completions | planned |
 
@@ -86,6 +85,11 @@ hosts search "staging box"        # match on address, names or comments
 hosts check                       # lint the file
 hosts --file ./hosts.new check --strict
 
+sudo hosts add 10.0.0.5 staging staging.local
+sudo hosts off staging            # keep the line, stop it resolving
+sudo hosts on staging             # and bring it back
+sudo hosts rm staging
+
 sudo hosts backup                 # keep a copy before editing by hand
 $EDITOR /etc/hosts
 hosts diff                        # see what changed since that copy
@@ -103,6 +107,10 @@ man hosts
 | `search <text>` | find entries by address, name or comment |
 | `check` | lint the file |
 | `export` | write the file to stdout |
+| `add <ip> <name>...` | add or update an entry |
+| `rm <name\|ip>` | remove a name, or every entry for an address |
+| `on <name>` | enable the entries carrying a name |
+| `off <name>` | disable them without deleting them |
 | `backup` | take a backup of the file |
 | `backup ls` | list the backups already taken |
 | `restore [id]` | put a backup back in place, the most recent by default |
@@ -199,6 +207,55 @@ case it had.
 A commented line is read as a disabled entry when its fields look like one:
 an address, at most four names, and every name a plausible hostname. Prose
 that happens to start with an address stays a comment.
+
+## Editing entries
+
+`add` points names at an address, `rm` takes them away, and `off` and `on`
+comment a line out and back in without deleting it.
+
+Three rules are worth knowing because each of them rejects the obvious answer.
+
+**The same name on IPv4 and IPv6 is never a clash.** `hosts add fd00::5
+staging` when `10.0.0.5 staging` exists is ordinary dual stack, not a
+conflict. A rule blind to the address family would refuse the most ordinary
+operation there is on a machine that has both.
+
+**`off`, `on` and `rm` act on every line carrying the name.** Turning off half
+of a dual-stack pair would leave the name resolving on the other family: a
+command doing half its job. Refusing to choose would be worse still, because
+it would fail on the correct hosts file of every Linux machine.
+
+**A name already pointing elsewhere is refused rather than moved.** `--force`
+moves it, and when the line carries nothing but the names being added the
+address is changed in place, which is both what updating means and the
+smallest possible diff. A disabled entry for the name is refused too, since
+`hosts on` is usually what was meant.
+
+`rm` of something that is not there exits `5`. A typo should not pass for
+success.
+
+### Minimal diffs
+
+A change never rebuilds the file from what was parsed out of it. It says which
+lines it replaces, which it deletes and what it appends, and every other line
+is written back exactly as it was read. There is no path through the code that
+could reformat a line nobody asked to touch.
+
+Within a line the edit is surgical too. Removing an alias takes the token and
+exactly one run of adjacent whitespace, so
+
+```
+10.0.0.5    staging   staging.local	# staging box
+```
+
+becomes
+
+```
+10.0.0.5    staging	# staging box
+```
+
+and not `10.0.0.5<TAB>staging # staging box`. `off` followed by `on` gives back
+the original line byte for byte.
 
 ## Writing
 

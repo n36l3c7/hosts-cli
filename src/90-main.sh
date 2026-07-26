@@ -117,6 +117,10 @@ main() {
     backup) cmd_backup "${rest[@]}" || status=$? ;;
     restore) cmd_restore "${rest[@]}" || status=$? ;;
     diff) cmd_diff "${rest[@]}" || status=$? ;;
+    add) cmd_add "${rest[@]}" || status=$? ;;
+    rm) cmd_rm "${rest[@]}" || status=$? ;;
+    on) cmd_on "${rest[@]}" || status=$? ;;
+    off) cmd_off "${rest[@]}" || status=$? ;;
     *) die_usage '' "unknown command: $command" ;;
   esac
 
