@@ -1,49 +1,212 @@
-.TH HOSTS 1 2026-07-26 "hosts @VERSION@" "User Commands"
+.TH HOSTS 1 2026-07-27 "hosts @VERSION@" "User Commands"
 .SH NAME
 hosts \- a safe command\-line manager for /etc/hosts
 .SH SYNOPSIS
 .B hosts
+.RI [ "global options" ]
 .I command
-.RI [ options ]
-.br
-.B hosts
-.BR \-h | \-\-help
-.br
-.B hosts
-.BR \-V | \-\-version
+.RI [ arguments ]
 .SH DESCRIPTION
 .B hosts
 manages the entries of the system hosts file without opening it in an
 editor.
-The hosts file is critical for name resolution, so every write is performed
-on a temporary file in the same directory, validated, and then moved into
-place with an atomic rename, preserving owner, group and permissions.
+The hosts file is critical for name resolution, so safety comes before
+convenience: input is validated before anything is touched, and writes are
+performed on a temporary file in the same directory, validated, and then
+moved into place with an atomic rename that preserves owner, group and
+permissions.
 .PP
-This release provides the packaging and build scaffolding only.
-No entry management command is implemented yet.
+This release provides the read only commands.
+No command writes to the file, and none of them needs any privilege beyond
+being able to read it.
+.SH COMMANDS
+.TP
+.BI "ls [" options "] [" pattern ]
+List the entries of the file.
+With a
+.IR pattern ,
+only entries carrying a name that matches that shell glob are listed;
+matching ignores case, and the pattern has to be quoted so that the shell
+does not expand it first.
+.RS
+.PP
+.B \-a
+or
+.B \-\-all
+lists active and disabled entries,
+.B \-\-disabled
+only the disabled ones.
+.RE
+.TP
+.BI "get " hostname
+Print the addresses the hostname points at, one per line and nothing else,
+so that the result can be captured directly.
+Only active entries are considered, because a commented out entry takes no
+part in name resolution.
+The match is exact and ignores case.
+Exits with 5 when the hostname is not in the file.
+.TP
+.BI "search " text
+Find entries whose address, names or comment contain the text.
+Matching is on substrings and ignores case.
+Disabled entries are included.
+Output is in the format of
+.BR ls .
+.TP
+.B check
+Lint the file and report what is wrong with it.
+See
+.B CHECK RULES
+below.
+.B \-\-strict
+makes a warning fail as an error does.
+.TP
+.B export
+Write the file to standard output.
+Without
+.B \-\-json
+this reproduces it byte for byte, comments, blank lines and a missing final
+newline included.
+.PP
+Every command accepts
+.B \-\-help
+and describes itself.
 .SH OPTIONS
+These are accepted before and after the command name.
+.TP
+.BI \-\-file " path"
+Operate on a file other than
+.IR /etc/hosts .
+.TP
+.B \-\-json
+Produce machine readable output.
+.TP
+.BR \-q ", " \-\-quiet
+Silence diagnostics.
+The data a command was asked to produce is never suppressed.
+.TP
+.BR \-v ", " \-\-verbose
+Print diagnostics about what is being done, on standard error.
 .TP
 .BR \-h ", " \-\-help
 Show a usage summary and exit.
 .TP
 .BR \-V ", " \-\-version
 Show the program version and exit.
+.SH OUTPUT FORMAT
+Diagnostics go to standard error, data to standard output.
+The text output of
+.B ls
+and
+.B search
+is four tab separated fields, always in this order and always this many,
+on a terminal exactly as in a pipe:
+.PP
+.RS
+address, names separated by a space, on or off, comment
+.RE
+.PP
+Nothing is aligned, coloured or paginated, and no option changes the number
+of fields, so
+.B "cut \-f1"
+is always the address.
+.PP
+The JSON schema carries a
+.B version
+field and is part of the public interface.
+Bytes outside ASCII are passed through unchanged.
+.SH CHECK RULES
+An error is something the resolver will get wrong or silently ignore; a
+warning is something untidy or merely suspect.
+.PP
+Errors:
+.BR invalid\-line ,
+a line that is not an address followed by a hostname;
+.BR invalid\-ip ,
+an address that does not parse;
+.BR invalid\-hostname ,
+a name breaking RFC 1123;
+.BR control\-character ,
+a control character in the line;
+.BR duplicate\-entry ,
+an earlier line that is identical.
+.PP
+Warnings:
+.BR duplicate\-name ,
+the name already points at that address on an earlier line;
+.BR conflicting\-ip ,
+the name points at a different address of the same family;
+.BR nonstandard\-hostname ,
+a name using an underscore;
+.BR missing\-loopback " and " missing\-loopback6 ,
+no active entry maps 127.0.0.1 or ::1 to localhost;
+.BR missing\-trailing\-newline ,
+the file does not end with a newline.
+.PP
+The same name on an IPv4 and on an IPv6 address is normal dual stack and is
+not reported.
+Rules that compare lines ignore disabled entries, which resolve nothing.
+.PP
+Findings are printed on standard output in the format compilers use, so that
+the error parser of an editor can consume them directly:
+.PP
+.RS
+.I file : line ": " severity ": " rule ": " message
+.RE
 .SH FILES
 .TP
 .I /etc/hosts
-The static table of hostname to IP address mappings that
-.B hosts
-is designed to manage.
+The static table of hostname to address mappings, and the default target of
+every command.
 .SH EXIT STATUS
 Exit codes are part of the public interface and keep their meaning for the
 whole 1.x release line.
 Values greater than or equal to 64 are reserved and never returned.
 .TP
 .B 0
-Success, including an idempotent operation that changed nothing.
+Success, including an operation that changed nothing.
+.TP
+.B 1
+Generic or unexpected failure, such as a target file that is not there.
 .TP
 .B 2
 Usage error: unknown command, unknown option, or a missing argument.
+.TP
+.B 3
+Insufficient permissions to read the file.
+.TP
+.B 4
+Invalid input, or
+.B check
+found errors.
+.TP
+.B 5
+The requested hostname is not in the file.
+.SH EXAMPLES
+List every entry, then only the ones under a domain:
+.PP
+.RS
+.EX
+hosts ls
+hosts ls '*.local'
+.EE
+.RE
+.PP
+Capture the address of a host:
+.PP
+.RS
+.EX
+address=$(hosts get staging)
+.EE
+.RE
+.PP
+Lint a candidate file in continuous integration, failing on warnings too:
+.PP
+.RS
+.EX
+hosts \-\-file ./hosts.new check \-\-strict
+.EE
+.RE
 .SH SEE ALSO
 .BR hosts (5),
 .BR hostname (7),
