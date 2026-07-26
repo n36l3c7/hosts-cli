@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-27
+
+Editing entries: `add`, `rm`, `on` and `off`, on top of the write engine of
+0.2.0.
+
+### Added
+
+- `add`, pointing names at an address. Adding what is already there changes
+  nothing. A missing name joins the line that already carries the others on
+  the same address; names that are nowhere go on a new line. Names spread over
+  several lines are refused, because merging them is the user's decision.
+- `rm`, taking a name off every line that carries it and dropping a line left
+  with nothing but its address, or removing every line pointing at an address.
+  Exits with 5 when nothing matches, so a typo does not pass for success.
+- `on` and `off`, enabling and disabling entries without deleting them.
+- Help for each of the new commands, and examples in the man page.
+
+### Changed
+
+- A change is expressed as a list of edits over line numbers instead of a
+  rebuild of the file, and within a line a name is removed together with one
+  run of adjacent whitespace. Lines nobody asked to touch come out byte for
+  byte identical, and `off` followed by `on` gives back the original line
+  exactly.
+- The same name on an IPv4 and on an IPv6 address is treated as dual stack
+  everywhere, never as a clash: `add` accepts it and `check` already did.
+- `off`, `on` and `rm` act on every line carrying the name rather than
+  refusing when there is more than one. Acting on one line of a dual stack
+  pair would leave the name resolving on the other family, and refusing to
+  choose would fail on the correct hosts file of every Linux machine.
+- A change reaching more than one line asks for confirmation; a change to a
+  single line does not.
+
 ## [0.2.0] - 2026-07-27
 
 The atomic write engine and the backup store. `restore` is the first command
@@ -106,7 +139,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/n36l3c7/hosts-cli/releases/tag/v0.0.1

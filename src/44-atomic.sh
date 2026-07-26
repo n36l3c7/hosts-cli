@@ -15,12 +15,17 @@
 ATOMIC_TMP=''
 ATOMIC_TARGET=''
 ATOMIC_LOCK_FD=''
+ATOMIC_SCRATCH=''
 
-# Remove the temporary file if a write was interrupted before it completed.
+# Remove the working files if a write was interrupted before it completed.
 atomic_cleanup() {
   if [[ -n $ATOMIC_TMP ]]; then
     rm -f -- "$ATOMIC_TMP"
     ATOMIC_TMP=''
+  fi
+  if [[ -n $ATOMIC_SCRATCH ]]; then
+    rm -f -- "$ATOMIC_SCRATCH"
+    ATOMIC_SCRATCH=''
   fi
 }
 

@@ -26,6 +26,61 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-3-0">0.3.0 &mdash; 2026-07-27</h2>
+      <p>
+        Editing entries: <code>add</code>, <code>rm</code>, <code>on</code> and
+        <code>off</code>, on top of the write engine of 0.2.0.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>add</code>, pointing names at an address. Adding what is already
+          there changes nothing. A missing name joins the line that already
+          carries the others on the same address; names that are nowhere go on a
+          new line. Names spread over several lines are refused, because merging
+          them is the user's decision.
+        </li>
+        <li>
+          <code>rm</code>, taking a name off every line that carries it and
+          dropping a line left with nothing but its address, or removing every
+          line pointing at an address. Exits with 5 when nothing matches, so a
+          typo does not pass for success.
+        </li>
+        <li>
+          <code>on</code> and <code>off</code>, enabling and disabling entries
+          without deleting them.
+        </li>
+        <li>
+          Help for each of the new commands, and examples in the man page.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          A change is expressed as a list of edits over line numbers instead of
+          a rebuild of the file, and within a line a name is removed together
+          with one run of adjacent whitespace. Lines nobody asked to touch come
+          out byte for byte identical, and <code>off</code> followed by
+          <code>on</code> gives back the original line exactly.
+        </li>
+        <li>
+          The same name on an IPv4 and on an IPv6 address is treated as dual
+          stack everywhere, never as a clash: <code>add</code> accepts it and
+          <code>check</code> already did.
+        </li>
+        <li>
+          <code>off</code>, <code>on</code> and <code>rm</code> act on every line
+          carrying the name rather than refusing when there is more than one.
+          Acting on one line of a dual stack pair would leave the name resolving
+          on the other family, and refusing to choose would fail on the correct
+          hosts file of every Linux machine.
+        </li>
+        <li>
+          A change reaching more than one line asks for confirmation; a change
+          to a single line does not.
+        </li>
+      </ul>
+
       <h2 id="v0-2-0">0.2.0 &mdash; 2026-07-27</h2>
       <p>
         The atomic write engine and the backup store. <code>restore</code> is
@@ -199,7 +254,7 @@
 
     <footer>
       <p>
-        hosts 0.2.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.3.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

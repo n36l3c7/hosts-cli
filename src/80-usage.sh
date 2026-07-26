@@ -16,6 +16,12 @@ Reading:
   check               lint the file
   export              write the file to stdout
 
+Editing:
+  add <ip> <name>...  add or update an entry
+  rm <name|ip>        remove a name, or every entry for an address
+  on <name>           enable the entries carrying a name
+  off <name>          disable them without deleting them
+
 Backups:
   backup              take a backup of the file
   backup ls           list the backups already taken
@@ -34,7 +40,7 @@ Global options:
   -h, --help          show this help, or the help of a command
   -V, --version       show the version
 
-Every command accepts --help. No command edits an entry yet.
+Every command accepts --help.
 
 Exit codes:
   0  success
@@ -159,6 +165,93 @@ comments, blank lines and a missing final newline included. With --json it
 emits every line, entries and comments alike, as a structured document.
 
 Options:
+  -h, --help      show this help
+EOF
+}
+
+help_add() {
+  cat <<EOF
+Usage: $PROGRAM_NAME add [options] <address> <hostname>...
+
+Point one or more hostnames at an address. Adding what is already there
+changes nothing and succeeds.
+
+Names that are missing from a line that already carries the others, on the
+same address, are added to it as aliases; names that are nowhere yet go on a
+new line at the end of the file. Names spread over several lines are refused,
+because merging lines is a decision for you to make.
+
+A name that already points somewhere else in the same address family is
+refused, and --force points it at the new address instead. The same name on
+an IPv4 and on an IPv6 address is ordinary dual stack and is never treated as
+a clash. A disabled entry for the name is refused too: '$PROGRAM_NAME on' is
+usually what was meant, and --force replaces it.
+
+A name that only breaks RFC 1123 by using an underscore is accepted with a
+warning, the same judgement '$PROGRAM_NAME check' makes.
+
+Options:
+      --dry-run   show the change and write nothing
+      --force     go ahead when something is in the way
+  -y, --yes       do not ask for confirmation
+  -h, --help      show this help
+
+Examples:
+  $PROGRAM_NAME add 10.0.0.5 staging staging.local
+  $PROGRAM_NAME add --force 10.0.0.9 staging
+EOF
+}
+
+help_rm() {
+  cat <<EOF
+Usage: $PROGRAM_NAME rm [options] <hostname|address>
+
+Given a hostname, take it off every line that carries it, active or disabled,
+and drop a line that is left with nothing but its address. When the name was
+the first on its line, the next one becomes the canonical name.
+
+Given an address, remove every line that points at it. Addresses are compared
+as they are written, so ::1 and 0:0:0:0:0:0:0:1 are two different subjects
+even though they name one address.
+
+Exits with 5 when nothing matches, so that a typo does not pass for success.
+
+Options:
+      --dry-run   show the change and write nothing
+  -y, --yes       do not ask for confirmation
+  -h, --help      show this help
+EOF
+}
+
+help_on() {
+  cat <<EOF
+Usage: $PROGRAM_NAME on [options] <hostname>
+
+Enable every disabled entry carrying the hostname, by removing the hash that
+comments it out. Asking for a state that already holds changes nothing and
+succeeds.
+
+Options:
+      --dry-run   show the change and write nothing
+  -y, --yes       do not ask for confirmation
+  -h, --help      show this help
+EOF
+}
+
+help_off() {
+  cat <<EOF
+Usage: $PROGRAM_NAME off [options] <hostname>
+
+Comment out every active entry carrying the hostname, keeping the line so it
+can be brought back with '$PROGRAM_NAME on'.
+
+Every line carrying the name is disabled, not just one. Turning off half of a
+dual stack pair would leave the name resolving on the other family, which is a
+command doing half its job.
+
+Options:
+      --dry-run   show the change and write nothing
+  -y, --yes       do not ask for confirmation
   -h, --help      show this help
 EOF
 }

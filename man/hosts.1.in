@@ -16,9 +16,6 @@ convenience: input is validated before anything is touched, and writes are
 performed on a temporary file in the same directory, validated, and then
 moved into place with an atomic rename that preserves owner, group and
 permissions.
-.PP
-This release provides the read only commands and the backup store.
-No command edits an entry yet.
 .SH COMMANDS
 .TP
 .BI "ls [" options "] [" pattern ]
@@ -67,6 +64,48 @@ Without
 .B \-\-json
 this reproduces it byte for byte, comments, blank lines and a missing final
 newline included.
+.TP
+.BI "add " address " " hostname ...
+Point one or more hostnames at an address.
+Adding what is already there changes nothing and succeeds.
+.RS
+.PP
+A name missing from a line that already carries the others, on the same
+address, is added to it as an alias; names that are nowhere yet go on a new
+line at the end of the file.
+Names spread over several lines are refused, because merging lines is a
+decision for you to make.
+.PP
+A name that already points somewhere else in the same address family is
+refused, and
+.B \-\-force
+points it at the new address instead.
+The same name on an IPv4 and on an IPv6 address is ordinary dual stack and is
+never treated as a clash.
+A disabled entry for the name is refused too:
+.B on
+is usually what was meant, and
+.B \-\-force
+replaces it.
+.RE
+.TP
+.BI "rm " hostname | address
+Given a hostname, take it off every line that carries it, active or disabled,
+and drop a line left with nothing but its address.
+When the name was the first on its line, the next one becomes the canonical
+name.
+Given an address, remove every line that points at it.
+Exits with 5 when nothing matches, so that a typo does not pass for success.
+.TP
+.BI "on " hostname
+Enable every disabled entry carrying the hostname.
+.TP
+.BI "off " hostname
+Comment out every active entry carrying the hostname, keeping the line so that
+.B on
+can bring it back.
+Every line carrying the name is disabled, not just one: turning off half of a
+dual stack pair would leave the name resolving on the other family.
 .TP
 .B backup
 Take a backup of the file.
@@ -197,6 +236,16 @@ the error parser of an editor can consume them directly:
 .I file : line ": " severity ": " rule ": " message
 .RE
 .SH WRITING
+A change never rebuilds the file from what was parsed out of it.
+It says which lines it replaces, which it deletes and what it appends, and
+every other line is written back exactly as it was read.
+Within a line the edit is surgical too: a name is removed together with one
+run of adjacent whitespace, so that
+.B "10.0.0.5    staging   staging.local"
+loses an alias without having its columns rewritten.
+The result is that the diff of a command shows what was asked for and nothing
+else.
+.PP
 Every change is written to a temporary file in the directory of the target,
 validated, and then moved into place with a rename.
 The kernel performs a rename within one filesystem atomically, so after a
@@ -327,6 +376,17 @@ Lint a candidate file in continuous integration, failing on warnings too:
 .RS
 .EX
 hosts \-\-file ./hosts.new check \-\-strict
+.EE
+.RE
+.PP
+Point a hostname at a staging box, then move it and take it away:
+.PP
+.RS
+.EX
+sudo hosts add 10.0.0.5 staging staging.local
+sudo hosts \-\-force add 10.0.0.9 staging staging.local
+sudo hosts off staging
+sudo hosts rm staging
 .EE
 .RE
 .PP
