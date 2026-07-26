@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-27
+
+The read-only commands. Nothing writes to the file yet, and no command needs
+any privilege beyond being able to read it.
+
+### Added
+
+- `ls`, listing entries with an optional case-insensitive glob over the names,
+  and `--all` and `--disabled` to select by state.
+- `get`, printing the addresses a hostname points at, one per line and nothing
+  else. Only active entries resolve; exits with 5 when the name is absent.
+- `search`, matching substrings against address, names and comments, disabled
+  entries included.
+- `check`, linting the file with eleven rules split into errors and warnings,
+  reported in the format compilers use, with `--strict` to fail on warnings.
+- `export`, reproducing the file byte for byte, or emitting every line as a
+  structured document with `--json`.
+- Global options `--file`, `--json`, `-q`/`--quiet` and `-v`/`--verbose`,
+  accepted before and after the command name, and a `--help` per command.
+- A versioned JSON schema, part of the public interface, for `ls`, `get`,
+  `search`, `check` and `export`.
+- Address validation matching `inet_pton`, rejecting octets with a leading
+  zero, and accepting an IPv6 zone identifier.
+- Hostname validation following RFC 1123, with the underscore reported as a
+  warning rather than an error because container tooling generates such names
+  in large numbers.
+- Exit codes 1, 3, 4 and 5 added to the contract, alongside 0 and 2.
+
+### Changed
+
+- The file is parsed into parallel arrays, one per field, keeping every line
+  verbatim so a later rewrite can leave untouched lines exactly as they were.
+- `LC_ALL=C` is set, so character ranges and case conversion behave the same
+  on every machine, and pathname expansion is disabled program wide, so a
+  stray asterisk in the file cannot turn into a list of filenames when a line
+  is split into fields.
+- Field splitting uses word splitting instead of `read <<<`, and validation
+  uses glob patterns instead of regular expressions: a here-string is not a
+  builtin and is written to a temporary file, and Bash recompiles a regular
+  expression on every match. A 50,000-line file went from 38 s to 7.5 s.
+
 ## [0.0.1] - 2026-07-26
 
 Scaffolding release: build, packaging, documentation and continuous
@@ -29,5 +70,6 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/n36l3c7/hosts-cli/releases/tag/v0.0.1

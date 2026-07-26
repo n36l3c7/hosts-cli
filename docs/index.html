@@ -50,20 +50,16 @@
       </ul>
 
       <h2 id="status">Status</h2>
-      <blockquote>
-        <p>
-          This is the <code>0.0.1</code> scaffolding release. Build, packaging,
-          documentation and continuous integration are in place, but no entry
-          management command is implemented yet: only <code>--help</code> and
-          <code>--version</code> do anything.
-        </p>
-      </blockquote>
-      <p>The command surface is delivered one wave at a time.</p>
+      <p>
+        This is <code>0.1.0</code>: the read-only commands are complete and
+        tested. No command writes to the file yet.
+      </p>
       <table>
         <thead>
           <tr>
             <th>Wave</th>
             <th>Commands</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -71,29 +67,35 @@
             <td>1</td>
             <td><code>ls</code>, <code>get</code>, <code>search</code>,
               <code>check</code>, <code>export</code></td>
+            <td>released in 0.1.0</td>
           </tr>
           <tr>
             <td>2</td>
             <td><code>backup</code>, <code>backup ls</code>,
               <code>restore</code>, <code>diff</code></td>
+            <td>next</td>
           </tr>
           <tr>
             <td>3</td>
             <td><code>add</code>, <code>rm</code>, <code>on</code>,
               <code>off</code></td>
+            <td>planned</td>
           </tr>
           <tr>
             <td>4</td>
             <td><code>edit</code>, <code>import</code>, <code>block</code></td>
+            <td>planned</td>
           </tr>
           <tr>
             <td>5</td>
             <td><code>profile save</code>, <code>profile load</code>,
               <code>profile ls</code>, <code>profile rm</code></td>
+            <td>planned</td>
           </tr>
           <tr>
             <td>6</td>
             <td><code>flush</code>, shell completions</td>
+            <td>planned</td>
           </tr>
         </tbody>
       </table>
@@ -128,19 +130,69 @@ sudo make install</code></pre>
       <pre><code>sudo make uninstall</code></pre>
 
       <h2 id="usage">Usage</h2>
-      <pre><code>hosts --version
-hosts --help
+      <pre><code>hosts ls                          # every active entry
+hosts ls '*.local'                # filtered by a glob on the names
+hosts get staging                 # just the address, ready to capture
+hosts search "staging box"        # match on address, names or comments
+hosts check                       # lint the file
+hosts --file ./hosts.new check --strict
 man hosts</code></pre>
 
-      <h2 id="configuration">Configuration</h2>
-      <p>
-        None yet. Configuration will be introduced together with the commands
-        that need it, through environment variables
-        (<code>HOSTS_BACKUP_DIR</code>, <code>HOSTS_KEEP_BACKUPS</code>) and the
-        global <code>--file</code> flag.
-      </p>
-
       <h2 id="reference">Command line reference</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Command</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ls [pattern]</code></td>
+            <td>
+              List entries. With a pattern, only entries carrying a name that
+              matches that shell glob; matching ignores case. <code>-a</code> or
+              <code>--all</code> includes disabled entries,
+              <code>--disabled</code> selects only those.
+            </td>
+          </tr>
+          <tr>
+            <td><code>get &lt;hostname&gt;</code></td>
+            <td>
+              Print the addresses a hostname points at, one per line and nothing
+              else. Only active entries are considered, because a commented out
+              entry takes no part in name resolution. Exits with 5 when the name
+              is not in the file.
+            </td>
+          </tr>
+          <tr>
+            <td><code>search &lt;text&gt;</code></td>
+            <td>
+              Find entries whose address, names or comment contain the text.
+              Matching is on substrings and ignores case; disabled entries are
+              included.
+            </td>
+          </tr>
+          <tr>
+            <td><code>check</code></td>
+            <td>
+              Lint the file. <code>--strict</code> makes a warning fail as an
+              error does.
+            </td>
+          </tr>
+          <tr>
+            <td><code>export</code></td>
+            <td>
+              Write the file to stdout, byte for byte, or as a structured
+              document with <code>--json</code>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Every command accepts <code>--help</code>.</p>
+
+      <h3 id="global-options">Global options</h3>
+      <p>Accepted before and after the command name.</p>
       <table>
         <thead>
           <tr>
@@ -150,26 +202,157 @@ man hosts</code></pre>
         </thead>
         <tbody>
           <tr>
+            <td><code>--file &lt;path&gt;</code></td>
+            <td>Operate on a file other than <code>/etc/hosts</code>.</td>
+          </tr>
+          <tr>
+            <td><code>--json</code></td>
+            <td>Machine-readable output.</td>
+          </tr>
+          <tr>
+            <td><code>-q</code>, <code>--quiet</code></td>
+            <td>Silence diagnostics. Never the data.</td>
+          </tr>
+          <tr>
+            <td><code>-v</code>, <code>--verbose</code></td>
+            <td>Print diagnostics on standard error.</td>
+          </tr>
+          <tr>
             <td><code>-h</code>, <code>--help</code></td>
-            <td>Show a usage summary on standard output and exit.</td>
+            <td>Show help, general or of a command.</td>
           </tr>
           <tr>
             <td><code>-V</code>, <code>--version</code></td>
-            <td>Show the program version on standard output and exit.</td>
+            <td>Show the version.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 id="output-format">Output format</h3>
+      <p>
+        Diagnostics go to standard error, data to standard output. The text
+        output of <code>ls</code> and <code>search</code> is four tab-separated
+        fields, always in this order and always this many, on a terminal exactly
+        as in a pipe:
+      </p>
+      <pre><code>address &lt;TAB&gt; names &lt;TAB&gt; on|off &lt;TAB&gt; comment</code></pre>
+      <p>
+        Nothing is aligned, coloured or paginated, and no option changes the
+        number of fields, so <code>cut -f1</code> is always the address and
+        <code>awk -F'\t' '$3=="off"'</code> always selects the disabled entries.
+      </p>
+
+      <h3 id="check-rules">check rules</h3>
+      <p>
+        An error is something the resolver will get wrong or silently ignore; a
+        warning is something untidy or merely suspect. <code>check</code> has to
+        be usable in continuous integration against files it did not write, so
+        anything with a legitimate reading stays a warning.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Rule</th>
+            <th>Severity</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>invalid-line</code></td>
+            <td>error</td>
+            <td>not an address followed by a hostname</td>
+          </tr>
+          <tr>
+            <td><code>invalid-ip</code></td>
+            <td>error</td>
+            <td>the address does not parse</td>
+          </tr>
+          <tr>
+            <td><code>invalid-hostname</code></td>
+            <td>error</td>
+            <td>the name breaks RFC 1123</td>
+          </tr>
+          <tr>
+            <td><code>control-character</code></td>
+            <td>error</td>
+            <td>the line contains a control character</td>
+          </tr>
+          <tr>
+            <td><code>duplicate-entry</code></td>
+            <td>error</td>
+            <td>an earlier line is identical</td>
+          </tr>
+          <tr>
+            <td><code>duplicate-name</code></td>
+            <td>warning</td>
+            <td>the name already points at that address</td>
+          </tr>
+          <tr>
+            <td><code>conflicting-ip</code></td>
+            <td>warning</td>
+            <td>the name points elsewhere in the same family</td>
+          </tr>
+          <tr>
+            <td><code>nonstandard-hostname</code></td>
+            <td>warning</td>
+            <td>the name uses an underscore</td>
+          </tr>
+          <tr>
+            <td><code>missing-loopback</code></td>
+            <td>warning</td>
+            <td>no active <code>127.0.0.1 localhost</code></td>
+          </tr>
+          <tr>
+            <td><code>missing-loopback6</code></td>
+            <td>warning</td>
+            <td>no active <code>::1 localhost</code></td>
+          </tr>
+          <tr>
+            <td><code>missing-trailing-newline</code></td>
+            <td>warning</td>
+            <td>the file does not end with a newline</td>
           </tr>
         </tbody>
       </table>
       <p>
-        The same reference is available offline as the
-        <code>hosts(1)</code> man page.
+        The same name on an IPv4 and on an IPv6 address is normal dual stack and
+        is not reported: a rule blind to the address family would flag every
+        healthy Linux machine. Rules that compare lines ignore disabled entries,
+        which resolve nothing.
+      </p>
+      <p>
+        Findings are printed on standard output in the format compilers use, so
+        the error parser of an editor can consume them directly:
+      </p>
+      <pre><code>/etc/hosts:14: error: duplicate-entry: identical to the entry on line 12
+/etc/hosts: warning: missing-loopback6: no active entry maps ::1 to localhost</code></pre>
+
+      <h3 id="addresses-and-names">Addresses and names</h3>
+      <p>
+        Addresses are validated as <code>inet_pton</code> does, which is
+        stricter than the historic <code>inet_aton</code>: an octet with a
+        leading zero is rejected rather than read as octal, because the two
+        readings disagree. An IPv6 zone identifier
+        (<code>fe80::1%eth0</code>) is accepted, because a link-local address
+        without one is ambiguous.
+      </p>
+      <p>
+        Hostnames follow RFC 1123. A trailing dot is rejected: an entry in a
+        hosts file is not a DNS wire name. Comparisons ignore case; the file
+        keeps whatever case it had.
+      </p>
+      <p>
+        A commented line is read as a disabled entry when its fields look like
+        one: an address, at most four names, and every name a plausible
+        hostname. Prose that happens to start with an address stays a comment.
       </p>
 
       <h3 id="exit-codes">Exit codes</h3>
       <p>
         Exit codes are part of the public interface: a value keeps its meaning
         for the whole <code>1.x</code> line. Values greater than or equal to 64
-        are reserved and never returned. Codes are documented here as the
-        commands that raise them land.
+        are reserved and never returned.
       </p>
       <table>
         <thead>
@@ -181,9 +364,11 @@ man hosts</code></pre>
         <tbody>
           <tr>
             <td><code>0</code></td>
-            <td>
-              Success, including an idempotent operation that changed nothing.
-            </td>
+            <td>Success, including an operation that changed nothing.</td>
+          </tr>
+          <tr>
+            <td><code>1</code></td>
+            <td>Generic error, such as a target file that is not there.</td>
           </tr>
           <tr>
             <td><code>2</code></td>
@@ -192,8 +377,65 @@ man hosts</code></pre>
               argument.
             </td>
           </tr>
+          <tr>
+            <td><code>3</code></td>
+            <td>Insufficient permissions to read the file.</td>
+          </tr>
+          <tr>
+            <td><code>4</code></td>
+            <td>Invalid input, or <code>check</code> found errors.</td>
+          </tr>
+          <tr>
+            <td><code>5</code></td>
+            <td>The requested hostname is not in the file.</td>
+          </tr>
         </tbody>
       </table>
+      <p>
+        A missing target file is <code>1</code> and not <code>5</code> on
+        purpose: <code>get</code> uses <code>5</code> for a hostname that is
+        absent, and a script must be able to tell the two apart.
+      </p>
+
+      <h2 id="json">JSON output</h2>
+      <p>
+        <code>--json</code> is accepted by <code>ls</code>, <code>get</code>,
+        <code>search</code>, <code>check</code> and <code>export</code>. The
+        schema carries a <code>version</code> field and is part of the public
+        interface. Bytes outside ASCII are passed through unchanged, so comments
+        stay readable.
+      </p>
+      <pre><code>{
+  "version": 1,
+  "file": "/etc/hosts",
+  "entries": [
+    {
+      "line": 12,
+      "kind": "entry",
+      "enabled": true,
+      "ip": "10.0.0.5",
+      "family": "inet",
+      "canonical": "staging",
+      "aliases": ["staging.local"],
+      "comment": "staging box",
+      "raw": "10.0.0.5\tstaging staging.local # staging box"
+    }
+  ]
+}</code></pre>
+      <p>
+        <code>check --json</code> replaces <code>entries</code> with
+        <code>summary</code> and <code>findings</code>;
+        <code>export --json</code> reports every line, comments and blank lines
+        included, distinguished by <code>kind</code>.
+      </p>
+
+      <h2 id="configuration">Configuration</h2>
+      <p>
+        None yet. Configuration arrives with the commands that need it, through
+        environment variables (<code>HOSTS_BACKUP_DIR</code>,
+        <code>HOSTS_KEEP_BACKUPS</code>) and the global
+        <code>--file</code> flag.
+      </p>
 
       <h2 id="development">Development</h2>
       <p>
@@ -213,11 +455,42 @@ make clean</code></pre>
         files passed with <code>--file</code>. It never requires root and never
         touches the real <code>/etc/hosts</code>.
       </p>
+
+      <h3 id="performance">Performance</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th><code>ls</code></th>
+            <th><code>check</code></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>a typical <code>/etc/hosts</code>, 10 lines</td>
+            <td>21 ms</td>
+            <td>23 ms</td>
+          </tr>
+          <tr>
+            <td>a 50,000-line blocklist</td>
+            <td>7.5 s</td>
+            <td>10 s</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        For the size <code>/etc/hosts</code> actually is, the tool is instant. A
+        blocklist of tens of thousands of entries is not: Bash costs roughly
+        150 &micro;s per line whatever the parser does, and no tuning inside the
+        loop changes that order of magnitude. Bulk handling of blocklists
+        arrives with <code>block</code> and <code>import</code>, which will use
+        a single <code>awk</code> pass where it wins.
+      </p>
     </main>
 
     <footer>
       <p>
-        hosts 0.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

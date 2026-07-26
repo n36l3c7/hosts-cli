@@ -26,6 +26,73 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-1-0">0.1.0 &mdash; 2026-07-27</h2>
+      <p>
+        The read-only commands. Nothing writes to the file yet, and no command
+        needs any privilege beyond being able to read it.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>ls</code>, listing entries with an optional case-insensitive
+          glob over the names, and <code>--all</code> and
+          <code>--disabled</code> to select by state.
+        </li>
+        <li>
+          <code>get</code>, printing the addresses a hostname points at, one per
+          line and nothing else. Only active entries resolve; exits with 5 when
+          the name is absent.
+        </li>
+        <li>
+          <code>search</code>, matching substrings against address, names and
+          comments, disabled entries included.
+        </li>
+        <li>
+          <code>check</code>, linting the file with eleven rules split into
+          errors and warnings, reported in the format compilers use, with
+          <code>--strict</code> to fail on warnings.
+        </li>
+        <li>
+          <code>export</code>, reproducing the file byte for byte, or emitting
+          every line as a structured document with <code>--json</code>.
+        </li>
+        <li>
+          Global options <code>--file</code>, <code>--json</code>,
+          <code>-q</code>/<code>--quiet</code> and
+          <code>-v</code>/<code>--verbose</code>, accepted before and after the
+          command name, and a <code>--help</code> per command.
+        </li>
+        <li>
+          A versioned JSON schema, part of the public interface, for
+          <code>ls</code>, <code>get</code>, <code>search</code>,
+          <code>check</code> and <code>export</code>.
+        </li>
+        <li>
+          Address validation matching <code>inet_pton</code>, rejecting octets
+          with a leading zero, and accepting an IPv6 zone identifier.
+        </li>
+        <li>
+          Hostname validation following RFC 1123, with the underscore reported
+          as a warning rather than an error because container tooling generates
+          such names in large numbers.
+        </li>
+        <li>
+          Exit codes 1, 3, 4 and 5 added to the contract, alongside 0 and 2.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          The file is parsed into parallel arrays, one per field, keeping every
+          line verbatim so a later rewrite can leave untouched lines exactly as
+          they were.
+        </li>
+        <li>
+          <code>LC_ALL=C</code> is set, so character ranges and case conversion
+          behave the same on every machine.
+        </li>
+      </ul>
+
       <h2 id="v0-0-1">0.0.1 &mdash; 2026-07-26</h2>
       <p>
         Scaffolding release: build, packaging, documentation and continuous
@@ -70,7 +137,7 @@
 
     <footer>
       <p>
-        hosts 0.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

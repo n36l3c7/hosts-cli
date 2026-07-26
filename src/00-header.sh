@@ -8,7 +8,12 @@
 # Homepage: https://github.com/n36l3c7/hosts-cli
 # Licence:  MIT
 
-set -euo pipefail
+# Pathname expansion is disabled for the whole program. Nothing here expands a
+# glob against the filesystem, while the file being parsed is arbitrary text
+# that must never be able to turn into a list of filenames when it is split
+# into fields. Doing it once is also far cheaper than guarding every split:
+# toggling the option costs more than the splitting itself.
+set -euf -o pipefail
 
 if [[ -z ${BASH_VERSINFO[0]:-} ]] ||
   ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
@@ -16,3 +21,9 @@ if [[ -z ${BASH_VERSINFO[0]:-} ]] ||
     "${BASH_VERSION:-unknown}" >&2
   exit 1
 fi
+
+# Pattern matching, character ranges and case conversion must behave the same
+# on every machine: in some locales [A-Za-z] is collation based and matches
+# characters that are not ASCII letters, which would let an invalid hostname
+# through validation.
+export LC_ALL=C
