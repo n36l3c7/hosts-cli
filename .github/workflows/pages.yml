@@ -4,8 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
-  release:
-    types: [published]
+  # Chained to the release workflow rather than to the release event: a
+  # release created by a workflow using the built-in token raises no event
+  # that can start another workflow, which is how GitHub stops workflows
+  # triggering each other in a loop. workflow_run is the way through that is
+  # meant for this.
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +26,11 @@ concurrency:
 jobs:
   build:
     name: build the site and the apt repository
+    # There is nothing new to publish when the release that would have
+    # produced it did not finish.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     # The secrets context cannot be read from a step condition, so the key is
     # brought into the environment here, where a condition can see it.
