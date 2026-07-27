@@ -176,6 +176,25 @@ The content that is about to be replaced is backed up first, so a restore can
 itself be undone.
 Only the content is restored: ownership and permissions stay as they are now.
 .TP
+.BI "profile save " name
+Keep the file as it is now under a name.
+Saving only reads the file, so it needs no privilege on it.
+Saving over a name that exists is refused unless
+.B \-\-force
+is given.
+.TP
+.BI "profile load " name
+Bring that state back, replacing what is in the file.
+The content being replaced is kept first, so a load can be undone with
+.BR restore .
+.TP
+.B "profile ls"
+List the profiles, as three tab separated fields: name, time, size in bytes.
+.TP
+.BI "profile rm " name
+Delete a profile.
+This asks first, because nothing else holds a copy of it.
+.TP
 .BI "diff [" id ]
 Compare the file with a backup, the most recent one by default.
 Removed lines are what the backup holds, added lines what the file holds now.
@@ -375,7 +394,30 @@ The sidecar also records a SHA-256 of the copy, which
 .B restore
 verifies, and which is what tells an unchanged file from a changed one when
 deciding whether a new backup is worth taking.
+.SH PROFILES
+A profile is a snapshot of the whole file kept under a name, so that a known
+state can be brought back later.
+It is not an overlay: loading one replaces what is there.
+.PP
+A profile and a backup are the same object with different lifetimes.
+Backups are taken automatically before every change and rotate away; profiles
+are made on purpose and stay until they are deleted, which is why they live
+apart, under
+.IR /var/lib/hosts/profiles .
+Everything that makes a backup safe applies unchanged: the copy is byte for
+byte, the sidecar records the file it came from, and the checksum is verified
+before anything is written.
+.PP
+A profile name becomes part of a filename, so it may hold only letters,
+digits, dot, dash and underscore, may not begin with a dot or a dash, and is
+at most 64 characters.
+That is a question of safety rather than of tidiness.
 .SH ENVIRONMENT
+.TP
+.B HOSTS_PROFILE_DIR
+Where profiles are kept.
+Defaults to
+.IR /var/lib/hosts/profiles .
 .TP
 .B HOSTS_BACKUP_DIR
 Where backups are kept.
@@ -394,6 +436,9 @@ every command.
 .TP
 .I /var/backups/hosts
 The backup store, one directory per target file.
+.TP
+.I /var/lib/hosts/profiles
+The profile store, likewise one directory per target file.
 .SH EXIT STATUS
 Exit codes are part of the public interface and keep their meaning for the
 whole 1.x release line.
@@ -475,6 +520,16 @@ sudo hosts backup
 sudo hosts edit
 hosts diff
 sudo hosts restore \-\-yes
+.EE
+.RE
+.PP
+Keep two named states of the file and move between them:
+.PP
+.RS
+.EX
+sudo hosts profile save work
+sudo hosts profile load home
+hosts profile ls
 .EE
 .RE
 .PP

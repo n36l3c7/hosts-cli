@@ -31,6 +31,12 @@ Backups:
   restore [id]        put a backup back in place, the most recent by default
   diff [id]           compare the file with a backup
 
+Profiles:
+  profile save <name> keep the file as it is now, under a name
+  profile load <name> bring that state back
+  profile ls          list the profiles
+  profile rm <name>   delete one
+
 Global options:
   --file <path>       operate on a file other than $DEFAULT_HOSTS_FILE
   --json              machine readable output
@@ -353,6 +359,53 @@ Options:
       --dry-run    show the change and write nothing
   -y, --yes        do not ask for confirmation
   -h, --help       show this help
+EOF
+}
+
+help_profile() {
+  cat <<EOF
+Usage: $PROGRAM_NAME profile save <name>
+       $PROGRAM_NAME profile load <name>
+       $PROGRAM_NAME profile ls
+       $PROGRAM_NAME profile rm <name>
+
+Keep the file as it is now under a name, and bring that state back later.
+
+A profile is a snapshot of the whole file, not a set of entries merged into
+it: loading one replaces what is there. Saving only reads the file, so it
+needs no privilege on it.
+
+A profile and a backup are the same object with different lifetimes. Backups
+are taken automatically before every change and rotate away; profiles are made
+on purpose and stay until you delete them, which is why they live apart, under
+$(profile_root). Everything that makes a
+backup safe applies unchanged: the copy is byte for byte, the sidecar records
+the file it came from, and the checksum is verified before anything is written.
+
+'profile load' keeps the content it is about to replace, so it can be undone
+with '$PROGRAM_NAME restore' like any other change.
+
+Saving over a name that exists is refused unless --force is given: quietly
+replacing a state someone chose to keep is the kind of loss this program is
+meant to prevent. Deleting one asks first, because nothing else holds a copy.
+
+The output of 'profile ls' is three tab separated fields:
+
+  name <TAB> time <TAB> bytes
+
+Environment:
+  HOSTS_PROFILE_DIR   where profiles are kept (default $DEFAULT_PROFILE_ROOT)
+
+Options:
+      --dry-run   show what would happen and write nothing
+      --force     replace a profile that already exists
+  -y, --yes       do not ask for confirmation
+  -h, --help      show this help
+
+Examples:
+  sudo $PROGRAM_NAME profile save work
+  sudo $PROGRAM_NAME profile load home
+  $PROGRAM_NAME profile ls
 EOF
 }
 

@@ -51,7 +51,7 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>0.4.0</code>: every command in the plan except profiles,
+        This is <code>0.5.0</code>: every command in the plan except
         <code>flush</code> and shell completions.
       </p>
       <table>
@@ -90,12 +90,12 @@
             <td>5</td>
             <td><code>profile save</code>, <code>profile load</code>,
               <code>profile ls</code>, <code>profile rm</code></td>
-            <td>next</td>
+            <td>released in 0.5.0</td>
           </tr>
           <tr>
             <td>6</td>
             <td><code>flush</code>, shell completions</td>
-            <td>planned</td>
+            <td>next</td>
           </tr>
         </tbody>
       </table>
@@ -258,6 +258,28 @@ man hosts</code></pre>
               Point domains at a sinkhole address. With no argument the domains
               are read from standard input, one per line.
             </td>
+          </tr>
+          <tr>
+            <td><code>profile save &lt;name&gt;</code></td>
+            <td>
+              Keep the file as it is now under a name. Saving over a name that
+              exists is refused unless <code>--force</code> is given.
+            </td>
+          </tr>
+          <tr>
+            <td><code>profile load &lt;name&gt;</code></td>
+            <td>
+              Bring that state back. What it replaces is kept first, so the
+              load can be undone with <code>restore</code>.
+            </td>
+          </tr>
+          <tr>
+            <td><code>profile ls</code></td>
+            <td>List the profiles: name, time, size in bytes.</td>
+          </tr>
+          <tr>
+            <td><code>profile rm &lt;name&gt;</code></td>
+            <td>Delete one. Asks first, since nothing else holds a copy.</td>
           </tr>
           <tr>
             <td><code>backup</code></td>
@@ -796,6 +818,36 @@ sha256=6b604eae8902aea3b14f7b6d49f208116854a8a8c8ae33618a1ad8062462aca2</code></
         ones for reference.
       </p>
 
+      <h2 id="profiles">Profiles</h2>
+      <p>
+        A profile is a snapshot of the whole file kept under a name, so a known
+        state can be brought back later. It is not an overlay: loading one
+        replaces what is there.
+      </p>
+      <pre><code>sudo hosts profile save work
+sudo hosts profile load home
+hosts profile ls</code></pre>
+      <p>
+        A profile and a backup are the same object with different lifetimes.
+        Backups are taken automatically before every change and rotate away;
+        profiles are made on purpose and stay until you delete them, which is
+        why they live apart, under <code>/var/lib/hosts/profiles</code>.
+        Everything that makes a backup safe applies unchanged: the copy is byte
+        for byte, the sidecar records the file it came from, and the checksum is
+        verified before anything is written.
+      </p>
+      <p>
+        <code>profile load</code> keeps what it is about to replace, so it can
+        be undone with <code>hosts restore</code> like any other change. Saving
+        over a name that exists is refused unless <code>--force</code> is given,
+        and deleting one asks first, because nothing else holds a copy.
+      </p>
+      <p>
+        A profile name becomes part of a filename, so it may hold only letters,
+        digits, dot, dash and underscore, may not begin with a dot or a dash,
+        and is at most 64 characters. That is safety, not tidiness.
+      </p>
+
       <h2 id="configuration">Configuration</h2>
       <table>
         <thead>
@@ -815,6 +867,11 @@ sha256=6b604eae8902aea3b14f7b6d49f208116854a8a8c8ae33618a1ad8062462aca2</code></
             <td><code>HOSTS_KEEP_BACKUPS</code></td>
             <td><code>20</code></td>
             <td>how many to keep per file</td>
+          </tr>
+          <tr>
+            <td><code>HOSTS_PROFILE_DIR</code></td>
+            <td><code>/var/lib/hosts/profiles</code></td>
+            <td>where profiles are kept</td>
           </tr>
         </tbody>
       </table>
@@ -879,7 +936,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 0.4.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.5.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

@@ -16,11 +16,13 @@ setup() {
   HOSTS_VERSION="$(cat "$REPO_ROOT/VERSION")"
   FIXTURE="$BATS_TEST_TMPDIR/hosts"
 
-  # Every test gets its own backup store inside its temporary directory, so
-  # that the suite can never write into /var/backups.
+  # Every test gets its own stores inside its temporary directory, so that the
+  # suite can never write into /var/backups or /var/lib.
   HOSTS_BACKUP_DIR="$BATS_TEST_TMPDIR/backups"
+  HOSTS_PROFILE_DIR="$BATS_TEST_TMPDIR/profiles"
 
-  export REPO_ROOT HOSTS_BIN HOSTS_MAN HOSTS_VERSION FIXTURE HOSTS_BACKUP_DIR
+  export REPO_ROOT HOSTS_BIN HOSTS_MAN HOSTS_VERSION FIXTURE
+  export HOSTS_BACKUP_DIR HOSTS_PROFILE_DIR
 }
 
 # The directory the backups of the fixture end up in.

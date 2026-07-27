@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-27
+
+Profiles: named states of the file that can be brought back later.
+
+### Added
+
+- `profile save`, `profile load`, `profile ls` and `profile rm`. A profile is
+  a snapshot of the whole file, not a set of entries merged into it.
+- `HOSTS_PROFILE_DIR`, defaulting to `/var/lib/hosts/profiles`.
+- Profile names are checked before they become filenames: letters, digits,
+  dot, dash and underscore only, not starting with a dot or a dash, at most 64
+  characters. That is a question of safety, not of tidiness.
+
+### Changed
+
+- A profile reuses the backup machinery unchanged: the byte for byte copy, the
+  sidecar recording the file it was taken from, and the checksum verified
+  before anything is written. What differs is the lifetime, so the two are
+  kept in separate directories and rotation cannot reach a profile without
+  having to know anything about it.
+- `profile load` keeps the content it replaces, so it can be undone with
+  `restore` like any other change. Saving over a name that exists is refused
+  without `--force`, and deleting a profile asks first.
+
 ## [0.4.1] - 2026-07-27
 
 No change in behaviour. Every command, option, exit code and output format is
@@ -193,7 +217,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.2.0...v0.3.0

@@ -21,6 +21,14 @@ readonly DEFAULT_HOSTS_FILE='/etc/hosts'
 readonly DEFAULT_BACKUP_ROOT='/var/backups/hosts'
 readonly DEFAULT_BACKUP_KEEP=20
 
+# Profiles are saved states, not history, so they live under /var/lib rather
+# than /var/backups and have a setting of their own. They are never rotated.
+readonly DEFAULT_PROFILE_ROOT='/var/lib/hosts/profiles'
+
+# A profile name becomes part of a filename, so what it may contain is a
+# question of safety and not of tidiness.
+readonly MAX_PROFILE_NAME_LENGTH=64
+
 # The sinkhole addresses a blocked domain is pointed at. Both families are
 # used, because on a machine with IPv6 a block that only covers IPv4 blocks
 # nothing at all.
