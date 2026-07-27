@@ -124,6 +124,7 @@ main() {
     block) cmd_block "${rest[@]}" || status=$? ;;
     import) cmd_import "${rest[@]}" || status=$? ;;
     edit) cmd_edit "${rest[@]}" || status=$? ;;
+    profile) cmd_profile "${rest[@]}" || status=$? ;;
     *) die_usage '' "unknown command: $command" ;;
   esac
 

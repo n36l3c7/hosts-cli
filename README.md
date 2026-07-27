@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,7 +28,7 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `0.4.0`: every command in the plan except profiles, `flush` and shell
+This is `0.5.0`: every command in the plan except `flush` and shell
 completions.
 
 | Wave | Commands | Status |
@@ -37,8 +37,8 @@ completions.
 | 2 | `backup`, `backup ls`, `restore`, `diff` | released in 0.2.0 |
 | 3 | `add`, `rm`, `on`, `off` | released in 0.3.0 |
 | 4 | `edit`, `import`, `block` | released in 0.4.0 |
-| 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | next |
-| 6 | `flush`, shell completions | planned |
+| 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | released in 0.5.0 |
+| 6 | `flush`, shell completions | next |
 
 ## Requirements
 
@@ -117,6 +117,10 @@ man hosts
 | `edit` | open the file in `$EDITOR` and check it on the way back |
 | `import [file]` | merge entries from a file, or from stdin |
 | `block <domain>...` | point domains at a sinkhole address |
+| `profile save <name>` | keep the file as it is now, under a name |
+| `profile load <name>` | bring that state back |
+| `profile ls` | list the profiles |
+| `profile rm <name>` | delete one |
 | `backup` | take a backup of the file |
 | `backup ls` | list the backups already taken |
 | `restore [id]` | put a backup back in place, the most recent by default |
@@ -377,12 +381,41 @@ that matters out of the rotation window.
 be undone. Only the content is restored: ownership and permissions stay as they
 are now, and the sidecar keeps the original ones for reference.
 
+## Profiles
+
+A profile is a snapshot of the whole file kept under a name, so a known state
+can be brought back later. It is not an overlay: loading one replaces what is
+there.
+
+```sh
+sudo hosts profile save work
+sudo hosts profile load home
+hosts profile ls
+```
+
+A profile and a backup are the same object with different lifetimes. Backups
+are taken automatically before every change and rotate away; profiles are made
+on purpose and stay until you delete them, which is why they live apart, under
+`/var/lib/hosts/profiles`. Everything that makes a backup safe applies
+unchanged: the copy is byte for byte, the sidecar records the file it came
+from, and the checksum is verified before anything is written.
+
+`profile load` keeps what it is about to replace, so it can be undone with
+`hosts restore` like any other change. Saving over a name that exists is
+refused unless `--force` is given, and deleting one asks first, because
+nothing else holds a copy.
+
+A profile name becomes part of a filename, so it may hold only letters,
+digits, dot, dash and underscore, may not begin with a dot or a dash, and is
+at most 64 characters. That is safety, not tidiness.
+
 ## Configuration
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `HOSTS_BACKUP_DIR` | `/var/backups/hosts` | where backups are kept |
 | `HOSTS_KEEP_BACKUPS` | `20` | how many to keep per file |
+| `HOSTS_PROFILE_DIR` | `/var/lib/hosts/profiles` | where profiles are kept |
 
 The most recent backup is never removed, whatever `HOSTS_KEEP_BACKUPS` says.
 If the backup directory cannot be written, the command fails with exit `3` and

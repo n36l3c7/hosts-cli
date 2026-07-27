@@ -26,6 +26,43 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-5-0">0.5.0 &mdash; 2026-07-27</h2>
+      <p>Profiles: named states of the file that can be brought back later.</p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>profile save</code>, <code>profile load</code>,
+          <code>profile ls</code> and <code>profile rm</code>. A profile is a
+          snapshot of the whole file, not a set of entries merged into it.
+        </li>
+        <li>
+          <code>HOSTS_PROFILE_DIR</code>, defaulting to
+          <code>/var/lib/hosts/profiles</code>.
+        </li>
+        <li>
+          Profile names are checked before they become filenames: letters,
+          digits, dot, dash and underscore only, not starting with a dot or a
+          dash, at most 64 characters. That is a question of safety, not of
+          tidiness.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          A profile reuses the backup machinery unchanged: the byte for byte
+          copy, the sidecar recording the file it was taken from, and the
+          checksum verified before anything is written. What differs is the
+          lifetime, so the two are kept in separate directories and rotation
+          cannot reach a profile without having to know anything about it.
+        </li>
+        <li>
+          <code>profile load</code> keeps the content it replaces, so it can be
+          undone with <code>restore</code> like any other change. Saving over a
+          name that exists is refused without <code>--force</code>, and deleting
+          a profile asks first.
+        </li>
+      </ul>
+
       <h2 id="v0-4-1">0.4.1 &mdash; 2026-07-27</h2>
       <p>
         No change in behaviour. Every command, option, exit code and output
@@ -333,7 +370,7 @@
 
     <footer>
       <p>
-        hosts 0.4.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.5.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>
