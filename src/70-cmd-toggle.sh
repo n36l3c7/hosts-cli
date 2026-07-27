@@ -56,8 +56,7 @@ _toggle_entries() {
   fi
   name=${positional[0]}
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
   hostsfile_load "$target"
 
   split_on_whitespace "${_hf_by_name[${name,,}]:-}"

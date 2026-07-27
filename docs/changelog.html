@@ -26,6 +26,30 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-4-1">0.4.1 &mdash; 2026-07-27</h2>
+      <p>
+        No change in behaviour. Every command, option, exit code and output
+        format is what it was in 0.4.0.
+      </p>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          Functions that produce a value now put it in a variable the caller
+          names, instead of in one they share. Three bugs in the first five
+          releases had the same shape: a caller read a shared result variable
+          after calling something else that had written to it in the meantime,
+          and got a perfectly valid value belonging to another file. Naming the
+          destination removes the shared variable and with it that whole class
+          of mistake. The parser keeps its shared buffers, where the cost of a
+          fresh variable per line was measured and found to matter.
+        </li>
+        <li>
+          Locals in those functions are prefixed with an underscore. A local
+          sharing its name with the variable a caller asked to fill shadows it,
+          and the result then quietly never arrives.
+        </li>
+      </ul>
+
       <h2 id="v0-4-0">0.4.0 &mdash; 2026-07-27</h2>
       <p><code>edit</code>, <code>import</code> and <code>block</code>.</p>
       <h3>Added</h3>
@@ -309,7 +333,7 @@
 
     <footer>
       <p>
-        hosts 0.4.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.4.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

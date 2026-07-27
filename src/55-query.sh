@@ -2,7 +2,6 @@
 #
 # Predicates used to select records.
 
-declare -a SELECTED=()
 
 # Succeed when any name of a record matches a shell glob. Matching ignores
 # case, because hostname comparison is case insensitive.
@@ -42,19 +41,20 @@ record_matches_text() {
   return 1
 }
 
-# Store in SELECTED the indexes of the active records carrying a name.
+# Store the indexes of the active records carrying a name.
 records_for_name() {
-  local name=${1,,}
-  local -a candidates=()
-  local -i index
+  local _name=${1,,}
+  local -n _out_records=$2
+  local -a _candidates=()
+  local -i _index
 
-  SELECTED=()
-  split_on_whitespace "${_hf_by_name[$name]:-}"
-  candidates=("${FIELDS[@]}")
+  _out_records=()
+  split_on_whitespace "${_hf_by_name[$_name]:-}"
+  _candidates=("${FIELDS[@]}")
 
-  for index in "${candidates[@]}"; do
-    if ((_hf_enabled[index])); then
-      SELECTED+=("$index")
+  for _index in "${_candidates[@]}"; do
+    if ((_hf_enabled[_index])); then
+      _out_records+=("$_index")
     fi
   done
 }

@@ -28,8 +28,7 @@ cmd_edit() {
     die_usage 'edit ' 'edit has nothing to preview; use --file to work on a copy'
   fi
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
 
   # Fail before the editor opens rather than after the work is done.
   local directory=${target%/*}
@@ -38,8 +37,7 @@ cmd_edit() {
     die "$EX_PERM" "cannot write in $directory: $(write_failure_hint "$target")"
   fi
 
-  file_sha256 "$target"
-  original_sha=$FILE_SHA256
+  file_sha256 "$target" original_sha
 
   workdir=$(mktemp -d) || die "$EX_ERROR" 'cannot create a working directory'
   copy="$workdir/hosts"
@@ -54,8 +52,8 @@ cmd_edit() {
       die "$EX_ERROR" 'the editor exited with an error'
     }
 
-    file_sha256 "$copy"
-    if [[ $FILE_SHA256 == "$original_sha" ]]; then
+    file_sha256 "$copy" edited_sha
+    if [[ $edited_sha == "$original_sha" ]]; then
       rm -rf -- "$workdir"
       info "$target is unchanged"
       return "$EX_OK"
@@ -79,11 +77,7 @@ cmd_edit() {
     fi
   done
 
-  # Kept aside before anything else runs: taking the backup below checksums
-  # the target, and FILE_SHA256 holds whatever was hashed last.
-  file_sha256 "$copy"
-  local edited_sha=$FILE_SHA256
-
+  file_sha256 "$copy" edited_sha
   backup_before_write "$target"
   atomic_install_file "$target" "$copy" "$edited_sha"
   rm -rf -- "$workdir"

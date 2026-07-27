@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-27
+
+No change in behaviour. Every command, option, exit code and output format is
+what it was in 0.4.0.
+
+### Changed
+
+- Functions that produce a value now put it in a variable the caller names,
+  instead of in one they share. Three bugs in the first five releases had the
+  same shape: a caller read a shared result variable after calling something
+  else that had written to it in the meantime, and got a perfectly valid value
+  belonging to another file. Naming the destination removes the shared
+  variable and with it that whole class of mistake. The parser keeps its
+  shared buffers, where the cost of a fresh variable per line was measured and
+  found to matter; everywhere else it costs nothing.
+- Locals in those functions are prefixed with an underscore. A local sharing
+  its name with the variable a caller asked to fill shadows it, and the result
+  then quietly never arrives; the prefix makes that impossible rather than
+  merely unlikely.
+
 ## [0.4.0] - 2026-07-27
 
 `edit`, `import` and `block`.
@@ -173,7 +193,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.1.0...v0.2.0

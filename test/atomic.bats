@@ -22,8 +22,8 @@ $1"
   in_engine "
     atomic_begin '$FIXTURE'
     printf 'new\n' >\"\$ATOMIC_TMP\"
-    file_sha256 \"\$ATOMIC_TMP\"
-    atomic_commit \"\$FILE_SHA256\"
+    file_sha256 \"\$ATOMIC_TMP\" prepared
+    atomic_commit \"\$prepared\"
   "
   [ "$status" -eq 0 ]
   [ "$(cat "$FIXTURE")" = 'new' ]
@@ -90,8 +90,8 @@ $1"
   in_engine "
     atomic_begin '$FIXTURE'
     printf 'new\n' >\"\$ATOMIC_TMP\"
-    file_sha256 \"\$ATOMIC_TMP\"
-    atomic_commit \"\$FILE_SHA256\"
+    file_sha256 \"\$ATOMIC_TMP\" prepared
+    atomic_commit \"\$prepared\"
   "
   [ "$status" -eq 0 ]
   run stat -c '%a' "$FIXTURE"
@@ -103,8 +103,8 @@ $1"
   in_engine "
     atomic_begin '$target'
     printf 'new\n' >\"\$ATOMIC_TMP\"
-    file_sha256 \"\$ATOMIC_TMP\"
-    atomic_commit \"\$FILE_SHA256\"
+    file_sha256 \"\$ATOMIC_TMP\" prepared
+    atomic_commit \"\$prepared\"
   "
   [ "$status" -eq 0 ]
   run stat -c '%a' "$target"

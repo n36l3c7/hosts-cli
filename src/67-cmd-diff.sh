@@ -3,7 +3,7 @@
 # hosts diff - compare the file with a backup.
 
 cmd_diff() {
-  local target id copy
+  local target directory id copy meta
   local -a positional=()
 
   while (($#)); do
@@ -38,12 +38,11 @@ cmd_diff() {
     die "$EX_ERROR" 'diff is not installed; it comes from the diffutils package'
   fi
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
 
-  backup_resolve_id "$target" "${positional[0]:-}"
-  id=$BACKUP_RESOLVED_ID
-  copy=$(backup_path_for "$id")
+  backup_resolve_id "$target" "${positional[0]:-}" id
+  backup_dir_for "$target" directory
+  backup_paths_for "$directory" "$id" copy meta
 
   # The backup comes first, so that added lines are what the file has now and
   # removed lines are what it used to have.

@@ -41,10 +41,9 @@ cmd_add() {
   address=${positional[0]}
   names=("${positional[@]:1}")
 
-  if ! classify_address "$address"; then
+  if ! classify_address "$address" family; then
     die "$EX_VALIDATION" "not a valid IPv4 or IPv6 address: $address"
   fi
-  family=$_ADDRESS_FAMILY
 
   # The same names check treats as an error what check treats as an error, and
   # merely warns where check warns. It would make no sense for check to
@@ -60,8 +59,7 @@ cmd_add() {
     die "$EX_VALIDATION" "not a valid hostname: $name"
   done
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
   hostsfile_load "$target"
 
   # Work out, for every name, whether it is already where it should be, in the

@@ -42,7 +42,6 @@ PARSED_COMMENT=''
 PARSED_HAS_COMMENT=0
 PARSED_REASON=''
 declare -a PARSED_NAME_LIST=()
-RECORD_CANONICAL=''
 declare -a RECORD_NAMES=()
 
 # The largest number of names a commented line may carry and still be read as
@@ -125,7 +124,8 @@ _parse_entry() {
     return 1
   fi
 
-  if ! classify_address "${fields[0]}"; then
+  local family=''
+  if ! classify_address "${fields[0]}" family; then
     PARSED_REASON='bad-address'
     return 1
   fi
@@ -140,7 +140,7 @@ _parse_entry() {
   fi
 
   PARSED_IP=${fields[0]}
-  PARSED_FAMILY=$_ADDRESS_FAMILY
+  PARSED_FAMILY=$family
   PARSED_NAME_LIST=("${fields[@]:1}")
   PARSED_NAMES=${fields[*]:1}
   PARSED_COMMENT=$comment
@@ -263,9 +263,9 @@ record_names() {
   RECORD_NAMES=("${FIELDS[@]}")
 }
 
-# Store the canonical name of a record, the first one on the line, in
-# RECORD_CANONICAL.
+# Store the canonical name of a record, which is the first one on the line.
 record_canonical() {
-  local all_names=${_hf_names[$1]}
-  RECORD_CANONICAL=${all_names%% *}
+  local _all_names=${_hf_names[$1]}
+  local -n _out_canonical=$2
+  _out_canonical=${_all_names%% *}
 }

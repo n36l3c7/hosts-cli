@@ -46,45 +46,45 @@ cmd_backup() {
 # Taking a backup only reads the target, so it needs no privilege on it; what
 # it needs is somewhere to write the copy.
 _backup_take() {
-  local target
+  local target created
 
   hostsfile_load "$OPT_FILE"
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
 
-  backup_create "$target"
+  backup_create "$target" created
 
-  if [[ -n $BACKUP_CREATED_ID ]]; then
-    printf '%s\n' "$BACKUP_CREATED_ID"
+  if [[ -n $created ]]; then
+    printf '%s\n' "$created"
   fi
 
   return "$EX_OK"
 }
 
 _backup_list() {
-  local target id copy
+  local target directory id copy meta sep=''
+  local -a ids=()
+  local -A meta_fields=()
   local -i i
-  local sep=''
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
 
-  backup_list "$target"
+  backup_dir_for "$target" directory
+  backup_list "$target" ids
 
   if ((OPT_JSON)); then
     json_literal "$target"
     printf '{\n'
     printf '  "version": %d,\n' "$JSON_SCHEMA_VERSION"
     printf '  "file": %s,\n' "$JSON_LITERAL"
-    json_literal "$BACKUP_DIR"
+    json_literal "$directory"
     printf '  "directory": %s,\n' "$JSON_LITERAL"
     printf '  "backups": ['
 
     sep=$'\n'
-    for ((i = 0; i < ${#BACKUP_IDS[@]}; i++)); do
-      id=${BACKUP_IDS[i]}
-      copy=$(backup_path_for "$id")
-      backup_meta_read "$(backup_meta_path_for "$id")"
+    for ((i = 0; i < ${#ids[@]}; i++)); do
+      id=${ids[i]}
+      backup_paths_for "$directory" "$id" copy meta
+      backup_meta_read "$meta" meta_fields
 
       printf '%s' "$sep"
       sep=$',\n'
@@ -92,21 +92,21 @@ _backup_list() {
       printf '      "index": %d,\n' "$((i + 1))"
       json_literal "$id"
       printf '      "id": %s,\n' "$JSON_LITERAL"
-      json_literal "$META_TIME"
+      json_literal "${meta_fields[time]:-}"
       printf '      "time": %s,\n' "$JSON_LITERAL"
-      printf '      "bytes": %d,\n' "$(_file_size "$copy")"
-      json_literal "$META_SHA256"
+      printf '      "bytes": %d,\n' "$(file_size "$copy")"
+      json_literal "${meta_fields[sha256]:-}"
       printf '      "sha256": %s,\n' "$JSON_LITERAL"
-      json_literal "$META_MODE"
+      json_literal "${meta_fields[mode]:-}"
       printf '      "mode": %s,\n' "$JSON_LITERAL"
-      json_literal "$META_OWNER"
+      json_literal "${meta_fields[owner]:-}"
       printf '      "owner": %s,\n' "$JSON_LITERAL"
-      json_literal "$META_GROUP"
+      json_literal "${meta_fields[group]:-}"
       printf '      "group": %s\n' "$JSON_LITERAL"
       printf '    }'
     done
 
-    if ((${#BACKUP_IDS[@]} > 0)); then
+    if ((${#ids[@]} > 0)); then
       printf '\n  ]\n'
     else
       printf ']\n'
@@ -115,18 +115,18 @@ _backup_list() {
     return "$EX_OK"
   fi
 
-  for ((i = 0; i < ${#BACKUP_IDS[@]}; i++)); do
-    id=${BACKUP_IDS[i]}
-    copy=$(backup_path_for "$id")
-    backup_meta_read "$(backup_meta_path_for "$id")"
+  for ((i = 0; i < ${#ids[@]}; i++)); do
+    id=${ids[i]}
+    backup_paths_for "$directory" "$id" copy meta
+    backup_meta_read "$meta" meta_fields
     printf '%d\t%s\t%s\t%s\n' \
-      "$((i + 1))" "$id" "$META_TIME" "$(_file_size "$copy")"
+      "$((i + 1))" "$id" "${meta_fields[time]:-}" "$(file_size "$copy")"
   done
 
   return "$EX_OK"
 }
 
-_file_size() {
+file_size() {
   local output
   output=$(stat -c '%s' -- "$1" 2>/dev/null) || output=0
   printf '%s' "$output"
