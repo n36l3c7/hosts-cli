@@ -21,6 +21,10 @@ jobs:
   build:
     name: build the site and the apt repository
     runs-on: ubuntu-latest
+    # The secrets context cannot be read from a step condition, so the key is
+    # brought into the environment here, where a condition can see it.
+    env:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,9 +76,7 @@ jobs:
         # turns off the authenticity check. On this project that would be hard
         # to defend, so an unsigned index is never deployed: see the guard in
         # the deploy job.
-        if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        if: env.GPG_PRIVATE_KEY != ''
         working-directory: site/apt
         run: |
           export GNUPGHOME=$(mktemp -d)
