@@ -32,13 +32,13 @@ cmd_rm() {
   fi
   subject=${positional[0]}
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
   hostsfile_load "$target"
 
   edit_reset
 
-  if classify_address "$subject"; then
+  local family=''
+  if classify_address "$subject" family; then
     _rm_by_address "$subject"
     edit_commit "$target" "remove every entry for $subject"
   else

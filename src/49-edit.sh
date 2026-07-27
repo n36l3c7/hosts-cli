@@ -125,8 +125,7 @@ edit_commit() {
   trap 'atomic_cleanup; exit 143' TERM
 
   edit_render "$ATOMIC_SCRATCH"
-  file_sha256 "$ATOMIC_SCRATCH"
-  expected_sha256=$FILE_SHA256
+  file_sha256 "$ATOMIC_SCRATCH" expected_sha256
 
   if ((OPT_DRY_RUN)); then
     edit_show_difference "$target" "$ATOMIC_SCRATCH"

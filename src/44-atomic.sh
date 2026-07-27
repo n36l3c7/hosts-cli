@@ -105,10 +105,7 @@ atomic_commit() {
   local want_owner='' want_group='' want_mode=''
 
   if [[ -e $target ]]; then
-    file_attributes "$target"
-    want_owner=$FILE_OWNER
-    want_group=$FILE_GROUP
-    want_mode=$FILE_MODE
+    file_attributes "$target" want_owner want_group want_mode
 
     chown -- "$want_owner:$want_group" "$ATOMIC_TMP" 2>/dev/null || true
     chmod -- "$want_mode" "$ATOMIC_TMP" 2>/dev/null || true
@@ -121,9 +118,10 @@ atomic_commit() {
       chcon --reference="$target" -- "$ATOMIC_TMP" 2>/dev/null || true
     fi
 
-    file_attributes "$ATOMIC_TMP"
-    if [[ $FILE_OWNER != "$want_owner" || $FILE_GROUP != "$want_group" ||
-      $FILE_MODE != "$want_mode" ]]; then
+    local got_owner got_group got_mode
+    file_attributes "$ATOMIC_TMP" got_owner got_group got_mode
+    if [[ $got_owner != "$want_owner" || $got_group != "$want_group" ||
+      $got_mode != "$want_mode" ]]; then
       atomic_abort
       die "$EX_PERM" \
         "cannot give the new file the ownership and permissions of $target"
@@ -135,8 +133,9 @@ atomic_commit() {
   # Did the bytes that were meant to be written actually land? This catches a
   # truncated write, a filesystem that filled up, and a producer that failed
   # halfway, while the target is still untouched.
-  file_sha256 "$ATOMIC_TMP"
-  if [[ $FILE_SHA256 != "$expected_sha256" ]]; then
+  local written_sha256
+  file_sha256 "$ATOMIC_TMP" written_sha256
+  if [[ $written_sha256 != "$expected_sha256" ]]; then
     atomic_abort
     die "$EX_INTEGRITY" \
       "the prepared content does not match what was intended, nothing was written"

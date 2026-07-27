@@ -7,7 +7,6 @@
 # as octal, because the two readings disagree and the ambiguity is a known
 # source of misdirected traffic.
 
-_ADDRESS_FAMILY=''
 _IPV6_GROUPS=0
 
 # Succeed when the argument is a syntactically valid IPv4 address.
@@ -125,19 +124,22 @@ is_valid_ipv6() {
   return 0
 }
 
-# Succeed when the argument is a valid IPv4 or IPv6 address, and store the
-# address family in _ADDRESS_FAMILY.
+# Succeed when the argument is a valid IPv4 or IPv6 address, storing the
+# address family in the variable named by the second argument.
 classify_address() {
-  local address=$1
-  if is_valid_ipv4 "$address"; then
-    _ADDRESS_FAMILY='inet'
+  local _address=$1
+  local -n _out_family=$2
+
+  if is_valid_ipv4 "$_address"; then
+    _out_family='inet'
     return 0
   fi
-  if is_valid_ipv6 "$address"; then
-    _ADDRESS_FAMILY='inet6'
+  if is_valid_ipv6 "$_address"; then
+    _out_family='inet6'
     return 0
   fi
-  _ADDRESS_FAMILY=''
+
+  _out_family=''
   return 1
 }
 

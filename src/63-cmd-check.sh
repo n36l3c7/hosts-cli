@@ -96,9 +96,10 @@ _check_scan() {
     key="${_hf_ip[index]} ${_hf_names[index],,}"
     if [[ -n ${first_seen[$key]:-} ]]; then
       other=${first_seen[$key]}
-      record_canonical "$index"
+      local canonical
+      record_canonical "$index" canonical
       check_add 'duplicate-entry' 'error' "$((index + 1))" "$((other + 1))" \
-        "$RECORD_CANONICAL" "identical to the entry on line $((other + 1))"
+        "$canonical" "identical to the entry on line $((other + 1))"
       continue
     fi
     first_seen[$key]=$index

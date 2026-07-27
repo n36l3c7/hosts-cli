@@ -5,7 +5,7 @@
 cmd_get() {
   local hostname
   local -i index
-  local -a positional=()
+  local -a positional=() selected=()
 
   while (($#)); do
     case $1 in
@@ -37,18 +37,18 @@ cmd_get() {
 
   # Only active entries are considered: a commented out entry does not take
   # part in name resolution, so reporting its address would be a lie.
-  records_for_name "$hostname"
+  records_for_name "$hostname" selected
 
   if ((OPT_JSON)); then
     json_literal "$hostname"
-    records_json_document "\"hostname\": $JSON_LITERAL" -- "${SELECTED[@]}"
+    records_json_document "\"hostname\": $JSON_LITERAL" -- "${selected[@]}"
   else
-    for index in "${SELECTED[@]}"; do
+    for index in "${selected[@]}"; do
       printf '%s\n' "${_hf_ip[index]}"
     done
   fi
 
-  if ((${#SELECTED[@]} == 0)); then
+  if ((${#selected[@]} == 0)); then
     return "$EX_NOTFOUND"
   fi
 

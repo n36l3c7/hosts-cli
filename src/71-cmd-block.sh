@@ -85,8 +85,9 @@ cmd_block() {
     ((ipv4_only)) || addresses+=("$DEFAULT_BLOCK_ADDRESS_V6")
   fi
 
+  local family=''
   for domain in "${addresses[@]}"; do
-    classify_address "$domain" ||
+    classify_address "$domain" family ||
       die "$EX_VALIDATION" "not a valid IPv4 or IPv6 address: $domain"
   done
 
@@ -101,8 +102,7 @@ cmd_block() {
     die "$EX_VALIDATION" "not a valid domain: $domain"
   done
 
-  resolve_path "$OPT_FILE" || die "$EX_ERROR" "cannot resolve $OPT_FILE"
-  target=$RESOLVED_PATH
+  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
   hostsfile_load "$target"
 
   edit_reset

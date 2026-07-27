@@ -81,10 +81,29 @@ load helper
 
 @test "classify_address reports the address family" {
   in_script '
-    classify_address 10.0.0.1 && [[ $_ADDRESS_FAMILY == inet ]] || exit 1
-    classify_address ::1 && [[ $_ADDRESS_FAMILY == inet6 ]] || exit 1
-    if classify_address nonsense; then exit 1; fi
-    [[ -z $_ADDRESS_FAMILY ]]
+    family=""
+    classify_address 10.0.0.1 family && [[ $family == inet ]] || exit 1
+    classify_address ::1 family && [[ $family == inet6 ]] || exit 1
+    if classify_address nonsense family; then exit 1; fi
+    [[ -z $family ]]
+  '
+  [ "$status" -eq 0 ]
+}
+
+@test "a result reaches the caller even when it names a variable the callee uses" {
+  # A local sharing its name with the variable the caller asked to fill would
+  # shadow it, and the result would quietly never arrive.
+  in_script '
+    address=""
+    target=""
+    file=""
+    output=""
+    classify_address 10.0.0.1 address || exit 1
+    [[ $address == inet ]] || { echo "address: $address"; exit 1; }
+    resolve_path /etc/hosts target || exit 1
+    [[ -n $target ]] || { echo "target empty"; exit 1; }
+    file_sha256 /etc/hosts output || exit 1
+    [[ ${#output} -eq 64 ]] || { echo "output: $output"; exit 1; }
   '
   [ "$status" -eq 0 ]
 }
