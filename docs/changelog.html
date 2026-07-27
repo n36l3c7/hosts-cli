@@ -26,6 +26,55 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v1-0-0">1.0.0 &mdash; 2026-07-27</h2>
+      <p>
+        The first release that can be installed with <code>apt</code>, and the
+        point from which the interface is a promise.
+      </p>
+      <p>
+        Nothing in the program itself changed from 0.6.0. What changed is that
+        there is now a way to install it that does not begin with cloning a
+        repository, and a commitment about what will not break.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          A Debian package, <code>hosts-cli</code>, holding the command, the man
+          page and the completions for bash and zsh. <code>make deb</code>
+          builds it from the same artifacts <code>make install</code> uses.
+        </li>
+        <li>
+          An APT repository published on GitHub Pages, signed, and rebuilt from
+          the packages attached to every GitHub Release so that it holds no
+          state of its own and cannot drift from what was published.
+        </li>
+        <li>
+          A release workflow that runs on a tag, refuses to continue when the
+          tag and the <code>VERSION</code> file disagree, installs the package
+          it just built and uses it before publishing anything, and takes the
+          release notes from the changelog.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          GitHub Pages is deployed by a workflow rather than from the
+          <code>docs</code> folder of the branch, because an APT repository
+          contains a binary and committing one would put it in the history for
+          good.
+        </li>
+        <li>
+          The following are now covered by semantic versioning, and breaking any
+          of them costs a major version: the exit codes 0 to 8; the tab
+          separated output of <code>ls</code>, <code>search</code>,
+          <code>check</code>, <code>backup ls</code>, <code>profile ls</code>
+          and <code>flush</code>, the number of fields included; the JSON
+          schema; the rule identifiers of <code>check</code>; the environment
+          variables and the layout of the backup and profile stores, sidecar
+          format included.
+        </li>
+      </ul>
+
       <h2 id="v0-6-0">0.6.0 &mdash; 2026-07-27</h2>
       <p>
         <code>flush</code> and shell completions. The planned command surface is
@@ -415,7 +464,7 @@
 
     <footer>
       <p>
-        hosts 0.6.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 1.0.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

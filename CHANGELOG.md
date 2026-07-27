@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-27
+
+The first release that can be installed with `apt`, and the point from which
+the interface is a promise.
+
+Nothing in the program itself changed from 0.6.0. What changed is that there
+is now a way to install it that does not begin with cloning a repository, and
+a commitment about what will not break.
+
+### Added
+
+- A Debian package, `hosts-cli`, holding the command, the man page and the
+  completions for bash and zsh. `make deb` builds it from the same artifacts
+  `make install` uses.
+- An APT repository published on GitHub Pages, signed, and rebuilt from the
+  packages attached to every GitHub Release so that it holds no state of its
+  own and cannot drift from what was published.
+- A release workflow that runs on a tag, refuses to continue when the tag and
+  the `VERSION` file disagree, installs the package it just built and uses it
+  before publishing anything, and takes the release notes from this file.
+
+### Changed
+
+- GitHub Pages is deployed by a workflow rather than from the `docs` folder of
+  the branch, because an APT repository contains a binary and committing one
+  would put it in the history for good.
+- The following are now covered by semantic versioning, and breaking any of
+  them costs a major version: the exit codes 0 to 8; the tab separated output
+  of `ls`, `search`, `check`, `backup ls`, `profile ls` and `flush`, the number
+  of fields included; the JSON schema; the rule identifiers of `check`; the
+  environment variables and the layout of the backup and profile stores,
+  sidecar format included.
+
 ## [0.6.0] - 2026-07-27
 
 `flush` and shell completions. The planned command surface is complete.
@@ -245,7 +278,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.0...v0.4.1

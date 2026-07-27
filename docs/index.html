@@ -51,8 +51,26 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>0.6.0</code>: the planned command surface is complete.
+        This is <code>1.0.0</code>, which is a promise rather than a claim that
+        the work is over: from here, breaking any of the following costs a
+        major version.
       </p>
+      <ul>
+        <li>The exit codes <code>0</code> to <code>8</code>.</li>
+        <li>
+          The tab-separated text output of <code>ls</code>,
+          <code>search</code>, <code>check</code>, <code>backup ls</code>,
+          <code>profile ls</code> and <code>flush</code>, including the number
+          of fields.
+        </li>
+        <li>The JSON schema, which carries its own <code>version</code> field.</li>
+        <li>The rule identifiers of <code>check</code>.</li>
+        <li>
+          The environment variables and the layout of the backup and profile
+          stores, including the sidecar format.
+        </li>
+      </ul>
+      <p>
       <table>
         <thead>
           <tr>
@@ -96,6 +114,11 @@
             <td><code>flush</code>, shell completions</td>
             <td>released in 0.6.0</td>
           </tr>
+          <tr>
+            <td>7</td>
+            <td>Debian package and APT repository</td>
+            <td>released in 1.0.0</td>
+          </tr>
         </tbody>
       </table>
 
@@ -125,17 +148,45 @@
       </p>
 
       <h2 id="installation">Installation</h2>
+      <h3 id="apt">Debian and Ubuntu</h3>
+      <pre><code>curl -fsSL https://n36l3c7.github.io/hosts-cli/apt/hosts-cli.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/hosts-cli.gpg
+
+echo 'deb [signed-by=/usr/share/keyrings/hosts-cli.gpg] https://n36l3c7.github.io/hosts-cli/apt stable main' \
+  | sudo tee /etc/apt/sources.list.d/hosts-cli.list
+
+sudo apt update
+sudo apt install hosts-cli</code></pre>
+      <p>
+        The repository is signed, and <code>signed-by</code> limits that key to
+        this repository alone rather than adding it to the system-wide keyring.
+        Nothing here asks you to write <code>trusted=yes</code>, which would
+        turn the authenticity check off.
+      </p>
+      <p>
+        The package installs the command, the man page and the completions for
+        bash and zsh. Every release is also attached to
+        <a href="https://github.com/n36l3c7/hosts-cli/releases">GitHub
+        Releases</a>, the <code>.deb</code> included.
+      </p>
+
+      <h3 id="from-source">From source</h3>
       <pre><code>git clone https://github.com/n36l3c7/hosts-cli.git
 cd hosts-cli
 sudo make install</code></pre>
       <p>
-        This installs the script to <code>/usr/local/bin/hosts</code> and the
-        man page to <code>/usr/local/share/man/man1/hosts.1</code>. Override the
-        destination with <code>PREFIX</code> or <code>DESTDIR</code>:
+        This installs the script to <code>/usr/local/bin/hosts</code>, the man
+        page to <code>/usr/local/share/man/man1/hosts.1</code>, and the
+        completions alongside them. Override the destination with
+        <code>PREFIX</code> or <code>DESTDIR</code>:
       </p>
       <pre><code>make install PREFIX="$HOME/.local"</code></pre>
       <p>To remove it:</p>
       <pre><code>sudo make uninstall</code></pre>
+      <p>
+        <code>make deb</code> builds the Debian package from the same
+        artifacts, if you would rather install it that way.
+      </p>
 
       <h2 id="usage">Usage</h2>
       <pre><code>hosts ls                          # every active entry
@@ -992,7 +1043,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 0.6.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 1.0.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>
