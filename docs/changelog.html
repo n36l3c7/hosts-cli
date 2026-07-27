@@ -26,6 +26,51 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v0-6-0">0.6.0 &mdash; 2026-07-27</h2>
+      <p>
+        <code>flush</code> and shell completions. The planned command surface is
+        complete.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>flush</code>, clearing the cache of the system resolver. It
+          performs only the flushes that cannot disturb anything,
+          systemd-resolved and nscd, and reports dnsmasq, unbound and BIND with
+          the command that would reload them rather than reloading them:
+          restarting a resolver can drop the network of the machine, which is
+          worse than a stale cache entry and not what anybody expects from a
+          command called flush. <code>--force</code> does not change that.
+        </li>
+        <li>
+          Completions for bash and zsh, installed by <code>make install</code>
+          into <code>share/bash-completion/completions</code> and
+          <code>share/zsh/site-functions</code>.
+        </li>
+        <li>
+          <code>HOSTS_COMPLETION_MAX_LINES</code>, defaulting to 5000.
+        </li>
+        <li>
+          <code>zsh</code> in the lint job, so that the syntax check of the zsh
+          completion actually runs rather than skipping itself.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          Finding no caching resolver is a success, not a failure, and
+          <code>flush</code> says why: the C library has no DNS cache of its
+          own, so without a caching daemon a change to the file is already in
+          effect.
+        </li>
+        <li>
+          Completion offers profile names and backup identifiers always, since
+          that means listing a directory, but hostnames only while the file is
+          under the limit: producing them means parsing the file, which on a
+          large blocklist takes seconds and would leave the shell looking hung.
+        </li>
+      </ul>
+
       <h2 id="v0-5-0">0.5.0 &mdash; 2026-07-27</h2>
       <p>Profiles: named states of the file that can be brought back later.</p>
       <h3>Added</h3>
@@ -370,7 +415,7 @@
 
     <footer>
       <p>
-        hosts 0.5.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.6.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

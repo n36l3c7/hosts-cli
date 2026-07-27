@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,8 +28,7 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `0.5.0`: every command in the plan except `flush` and shell
-completions.
+This is `0.6.0`: the planned command surface is complete.
 
 | Wave | Commands | Status |
 | --- | --- | --- |
@@ -38,7 +37,7 @@ completions.
 | 3 | `add`, `rm`, `on`, `off` | released in 0.3.0 |
 | 4 | `edit`, `import`, `block` | released in 0.4.0 |
 | 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | released in 0.5.0 |
-| 6 | `flush`, shell completions | next |
+| 6 | `flush`, shell completions | released in 0.6.0 |
 
 ## Requirements
 
@@ -121,6 +120,7 @@ man hosts
 | `profile load <name>` | bring that state back |
 | `profile ls` | list the profiles |
 | `profile rm <name>` | delete one |
+| `flush` | clear the cache of the system resolver |
 | `backup` | take a backup of the file |
 | `backup ls` | list the backups already taken |
 | `restore [id]` | put a backup back in place, the most recent by default |
@@ -409,6 +409,41 @@ A profile name becomes part of a filename, so it may hold only letters,
 digits, dot, dash and underscore, may not begin with a dot or a dash, and is
 at most 64 characters. That is safety, not tidiness.
 
+## Clearing the resolver cache
+
+`hosts flush` clears the cache of the system resolver. Often there is nothing
+to clear, and that is not a failure:
+
+> The C library has no DNS cache of its own. Without a caching daemon in the
+> path, a change to `/etc/hosts` is already in effect.
+
+That sentence is probably the most useful thing the command can say to someone
+wondering why their change "has not worked", so it says it and exits `0`.
+
+Only flushes that cannot disturb anything are performed: systemd-resolved and
+nscd. dnsmasq, unbound and BIND are reported with the command that would
+reload them, and left alone — restarting a resolver can drop the network of
+the machine, which is a worse outcome than a stale cache entry and not what
+anybody expects from a command called `flush`. `--force` does not change that.
+Caches kept by browsers are theirs, not the system's, and are not touched.
+
+```
+$ hosts flush
+systemd-resolved	flushed
+dnsmasq	needs-attention	not reloaded here, since that can drop the network: systemctl reload dnsmasq
+```
+
+## Shell completion
+
+Completions for bash and zsh are installed by `make install`.
+
+Profile names and backup identifiers are always offered: producing them means
+listing a directory. Hostnames are different, because producing them means
+reading and parsing the file, and on a file holding a large blocklist that
+takes seconds and would leave the shell looking hung. So they are offered only
+while the file is under `HOSTS_COMPLETION_MAX_LINES`, counted with `wc`, which
+reads but does not parse.
+
 ## Configuration
 
 | Variable | Default | Meaning |
@@ -416,6 +451,7 @@ at most 64 characters. That is safety, not tidiness.
 | `HOSTS_BACKUP_DIR` | `/var/backups/hosts` | where backups are kept |
 | `HOSTS_KEEP_BACKUPS` | `20` | how many to keep per file |
 | `HOSTS_PROFILE_DIR` | `/var/lib/hosts/profiles` | where profiles are kept |
+| `HOSTS_COMPLETION_MAX_LINES` | `5000` | largest file for which completion offers hostnames |
 
 The most recent backup is never removed, whatever `HOSTS_KEEP_BACKUPS` says.
 If the backup directory cannot be written, the command fails with exit `3` and

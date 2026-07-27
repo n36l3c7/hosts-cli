@@ -51,8 +51,7 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>0.5.0</code>: every command in the plan except
-        <code>flush</code> and shell completions.
+        This is <code>0.6.0</code>: the planned command surface is complete.
       </p>
       <table>
         <thead>
@@ -95,7 +94,7 @@
           <tr>
             <td>6</td>
             <td><code>flush</code>, shell completions</td>
-            <td>next</td>
+            <td>released in 0.6.0</td>
           </tr>
         </tbody>
       </table>
@@ -280,6 +279,13 @@ man hosts</code></pre>
           <tr>
             <td><code>profile rm &lt;name&gt;</code></td>
             <td>Delete one. Asks first, since nothing else holds a copy.</td>
+          </tr>
+          <tr>
+            <td><code>flush</code></td>
+            <td>
+              Clear the cache of the system resolver, where there is one that
+              can be cleared without disturbing anything.
+            </td>
           </tr>
           <tr>
             <td><code>backup</code></td>
@@ -848,6 +854,51 @@ hosts profile ls</code></pre>
         and is at most 64 characters. That is safety, not tidiness.
       </p>
 
+      <h2 id="flush">Clearing the resolver cache</h2>
+      <p>
+        <code>hosts flush</code> clears the cache of the system resolver. Often
+        there is nothing to clear, and that is not a failure:
+      </p>
+      <blockquote>
+        <p>
+          The C library has no DNS cache of its own. Without a caching daemon in
+          the path, a change to <code>/etc/hosts</code> is already in effect.
+        </p>
+      </blockquote>
+      <p>
+        That sentence is probably the most useful thing the command can say to
+        someone wondering why their change "has not worked", so it says it and
+        exits <code>0</code>.
+      </p>
+      <p>
+        Only flushes that cannot disturb anything are performed:
+        systemd-resolved and nscd. dnsmasq, unbound and BIND are reported with
+        the command that would reload them, and left alone &mdash; restarting a
+        resolver can drop the network of the machine, which is a worse outcome
+        than a stale cache entry and not what anybody expects from a command
+        called <code>flush</code>. <code>--force</code> does not change that.
+        Caches kept by browsers are theirs, not the system's, and are not
+        touched.
+      </p>
+      <pre><code>$ hosts flush
+systemd-resolved	flushed
+dnsmasq	needs-attention	not reloaded here, since that can drop the network: systemctl reload dnsmasq</code></pre>
+
+      <h2 id="completion">Shell completion</h2>
+      <p>
+        Completions for bash and zsh are installed by
+        <code>make install</code>.
+      </p>
+      <p>
+        Profile names and backup identifiers are always offered: producing them
+        means listing a directory. Hostnames are different, because producing
+        them means reading and parsing the file, and on a file holding a large
+        blocklist that takes seconds and would leave the shell looking hung. So
+        they are offered only while the file is under
+        <code>HOSTS_COMPLETION_MAX_LINES</code>, counted with <code>wc</code>,
+        which reads but does not parse.
+      </p>
+
       <h2 id="configuration">Configuration</h2>
       <table>
         <thead>
@@ -872,6 +923,11 @@ hosts profile ls</code></pre>
             <td><code>HOSTS_PROFILE_DIR</code></td>
             <td><code>/var/lib/hosts/profiles</code></td>
             <td>where profiles are kept</td>
+          </tr>
+          <tr>
+            <td><code>HOSTS_COMPLETION_MAX_LINES</code></td>
+            <td><code>5000</code></td>
+            <td>largest file for which completion offers hostnames</td>
           </tr>
         </tbody>
       </table>
@@ -936,7 +992,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 0.5.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 0.6.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

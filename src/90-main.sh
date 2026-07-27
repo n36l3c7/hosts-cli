@@ -125,6 +125,7 @@ main() {
     import) cmd_import "${rest[@]}" || status=$? ;;
     edit) cmd_edit "${rest[@]}" || status=$? ;;
     profile) cmd_profile "${rest[@]}" || status=$? ;;
+    flush) cmd_flush "${rest[@]}" || status=$? ;;
     *) die_usage '' "unknown command: $command" ;;
   esac
 
