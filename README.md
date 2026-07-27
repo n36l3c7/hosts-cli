@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,7 +28,16 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `0.6.0`: the planned command surface is complete.
+This is `1.0.0`, which is a promise rather than a claim that the work is over:
+from here, breaking any of the following costs a major version.
+
+- The exit codes `0` to `8`.
+- The tab-separated text output of `ls`, `search`, `check`, `backup ls`,
+  `profile ls` and `flush`, including the number of fields.
+- The JSON schema, which carries its own `version` field.
+- The rule identifiers of `check`.
+- The environment variables and the layout of the backup and profile stores,
+  including the sidecar format.
 
 | Wave | Commands | Status |
 | --- | --- | --- |
@@ -38,6 +47,7 @@ This is `0.6.0`: the planned command surface is complete.
 | 4 | `edit`, `import`, `block` | released in 0.4.0 |
 | 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | released in 0.5.0 |
 | 6 | `flush`, shell completions | released in 0.6.0 |
+| 7 | Debian package and APT repository | released in 1.0.0 |
 
 ## Requirements
 
@@ -55,15 +65,39 @@ No other runtime dependency: no `jq`, no Python, no external libraries.
 
 ## Installation
 
+### Debian and Ubuntu
+
+```sh
+curl -fsSL https://n36l3c7.github.io/hosts-cli/apt/hosts-cli.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/hosts-cli.gpg
+
+echo 'deb [signed-by=/usr/share/keyrings/hosts-cli.gpg] https://n36l3c7.github.io/hosts-cli/apt stable main' \
+  | sudo tee /etc/apt/sources.list.d/hosts-cli.list
+
+sudo apt update
+sudo apt install hosts-cli
+```
+
+The repository is signed, and `signed-by` limits that key to this repository
+alone rather than adding it to the system-wide keyring. Nothing here asks you
+to write `trusted=yes`, which would turn the authenticity check off.
+
+The package installs the command, the man page and the completions for bash
+and zsh. Every release is also attached to
+[GitHub Releases](https://github.com/n36l3c7/hosts-cli/releases), the `.deb`
+included.
+
+### From source
+
 ```sh
 git clone https://github.com/n36l3c7/hosts-cli.git
 cd hosts-cli
 sudo make install
 ```
 
-This installs the script to `/usr/local/bin/hosts` and the man page to
-`/usr/local/share/man/man1/hosts.1`. Override the destination with `PREFIX`
-or `DESTDIR`:
+This installs the script to `/usr/local/bin/hosts`, the man page to
+`/usr/local/share/man/man1/hosts.1`, and the completions alongside them.
+Override the destination with `PREFIX` or `DESTDIR`:
 
 ```sh
 make install PREFIX="$HOME/.local"
@@ -74,6 +108,9 @@ To remove it:
 ```sh
 sudo make uninstall
 ```
+
+`make deb` builds the Debian package from the same artifacts, if you would
+rather install it that way.
 
 ## Quickstart
 

@@ -1,0 +1,122 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build the site and the apt repository
+    runs-on: ubuntu-latest
+    # The secrets context cannot be read from a step condition, so the key is
+    # brought into the environment here, where a condition can see it.
+    env:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends dpkg-dev apt-utils
+
+      - name: Collect the packages from every release
+        # The index is rebuilt from scratch every time, from the releases, so
+        # the repository holds no state of its own and cannot drift away from
+        # what was actually published.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p site/apt/pool/main
+          tags=$(gh release list --limit 100 --json tagName --jq '.[].tagName')
+          for tag in $tags; do
+            gh release download "$tag" --dir site/apt/pool/main \
+              --pattern '*.deb' --clobber || true
+          done
+          ls -l site/apt/pool/main || true
+
+      - name: Build the index
+        working-directory: site/apt
+        run: |
+          mkdir -p dists/stable/main/binary-all
+          # Before the first release there is nothing to index, and an empty
+          # Packages file is a valid one.
+          if compgen -G 'pool/main/*.deb' >/dev/null; then
+            dpkg-scanpackages --arch all pool/main \
+              >dists/stable/main/binary-all/Packages
+          else
+            : >dists/stable/main/binary-all/Packages
+          fi
+          gzip -9nk dists/stable/main/binary-all/Packages
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin='hosts-cli' \
+            -o APT::FTPArchive::Release::Label='hosts-cli' \
+            -o APT::FTPArchive::Release::Suite='stable' \
+            -o APT::FTPArchive::Release::Codename='stable' \
+            -o APT::FTPArchive::Release::Architectures='all' \
+            -o APT::FTPArchive::Release::Components='main' \
+            -o APT::FTPArchive::Release::Description='hosts-cli' \
+            release dists/stable >dists/stable/Release
+
+      - name: Sign the index
+        # An unsigned repository forces its users to write trusted=yes, which
+        # turns off the authenticity check. On this project that would be hard
+        # to defend, so an unsigned index is never deployed: see the guard in
+        # the deploy job.
+        if: env.GPG_PRIVATE_KEY != ''
+        working-directory: site/apt
+        run: |
+          export GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --quiet --import
+          gpg --batch --yes --clearsign \
+            --output dists/stable/InRelease dists/stable/Release
+          gpg --batch --yes --detach-sign --armor \
+            --output dists/stable/Release.gpg dists/stable/Release
+          gpg --armor --export >hosts-cli.asc
+          rm -rf -- "$GNUPGHOME"
+
+      - name: Assemble the site
+        run: |
+          cp -r docs/. site/
+          test -f site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: deploy
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Refuse to publish an unsigned repository
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "GPG_PRIVATE_KEY is not set: the apt index would be" >&2
+            echo "unsigned, and its users would have to disable the" >&2
+            echo "authenticity check to install anything." >&2
+            exit 1
+          fi
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,22 @@
+Package: hosts-cli
+Version: @VERSION@
+Section: admin
+Priority: optional
+Architecture: all
+Depends: bash (>= 4.4)
+Maintainer: N36l3c7 <n36l3c7@protonmail.com>
+Homepage: https://n36l3c7.github.io/hosts-cli/
+Description: safe command-line manager for /etc/hosts
+ /etc/hosts is small enough that everyone edits it by hand, and critical
+ enough that a corrupted write breaks name resolution on the whole machine.
+ hosts makes the common operations immediate without giving up safety.
+ .
+ Every change goes to a temporary file in the same directory, is validated,
+ and is then moved into place with an atomic rename, so the file holds either
+ the whole of the old content or the whole of the new one and never a mixture.
+ Owner, group, permissions and SELinux context are carried over, an automatic
+ rotated backup is taken before every change, and read commands need no
+ privilege at all.
+ .
+ diffutils and util-linux are used when present, for the diff command and to
+ serialise concurrent writers; neither is required for the program to work.

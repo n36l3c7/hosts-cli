@@ -23,7 +23,7 @@ SOURCES  := $(sort $(wildcard src/*.sh))
 SCRIPT   := $(BUILDDIR)/hosts
 MANPAGE  := $(BUILDDIR)/hosts.1
 
-.PHONY: all build install uninstall test lint clean help
+.PHONY: all build deb install uninstall test lint clean help
 
 all: build
 
@@ -43,6 +43,9 @@ $(MANPAGE): man/hosts.1.in VERSION
 	chmod 0644 $@.tmp
 	mv -f $@.tmp $@
 
+deb: build
+	packaging/deb/build.sh $(BUILDDIR)
+
 install: build
 	$(INSTALL) -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(MANDIR)
 	$(INSTALL) -d $(DESTDIR)$(BASHCOMPDIR) $(DESTDIR)$(ZSHCOMPDIR)
@@ -60,6 +63,7 @@ uninstall:
 lint: build
 	$(SHELLCHECK) $(SCRIPT)
 	$(SHELLCHECK) completions/hosts.bash
+	$(SHELLCHECK) packaging/deb/build.sh
 	$(MANDOC) -T lint -W warning $(MANPAGE)
 	@# The zsh completion cannot be exercised from bash, so a syntax check is
 	@# what there is. It runs where zsh exists, and CI is one of those places.
@@ -78,6 +82,7 @@ clean:
 help:
 	@echo 'Targets:'
 	@echo '  build      assemble build/hosts and build/hosts.1'
+	@echo '  deb        build a Debian package from them'
 	@echo '  lint       run shellcheck on the script and mandoc on the man page'
 	@echo '  test       run the bats suite against the built script'
 	@echo '  install    install into $$(DESTDIR)$$(PREFIX) (default /usr/local)'

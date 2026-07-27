@@ -568,6 +568,20 @@ hosts ls \-\-blocked | wc \-l
 sudo hosts rm ads.example.com
 .EE
 .RE
+.SH INSTALLATION
+On Debian and Ubuntu, from the signed repository published alongside this
+documentation:
+.PP
+.RS
+.EX
+curl \-fsSL https://n36l3c7.github.io/hosts-cli/apt/hosts-cli.asc \e
+  | sudo gpg \-\-dearmor \-o /usr/share/keyrings/hosts-cli.gpg
+echo 'deb [signed-by=/usr/share/keyrings/hosts-cli.gpg] \e
+  https://n36l3c7.github.io/hosts-cli/apt stable main' \e
+  | sudo tee /etc/apt/sources.list.d/hosts-cli.list
+sudo apt update && sudo apt install hosts-cli
+.EE
+.RE
 .SH SEE ALSO
 .BR hosts (5),
 .BR hostname (7),
