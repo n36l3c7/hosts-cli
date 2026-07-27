@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The apt index is rebuilt after a release again. It was chained to the
+  release event, which a release created by a workflow using the built-in
+  token never raises: GitHub suppresses those so that workflows cannot
+  trigger each other in a loop. It now chains to the release workflow itself,
+  which is the mechanism meant for it. The index for 1.0.0 was published by
+  running the workflow by hand.
+
 ## [1.0.0] - 2026-07-27
 
 The first release that can be installed with `apt`, and the point from which
