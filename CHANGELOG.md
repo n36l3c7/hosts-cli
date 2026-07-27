@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-27
+
+`flush` and shell completions. The planned command surface is complete.
+
+### Added
+
+- `flush`, clearing the cache of the system resolver. It performs only the
+  flushes that cannot disturb anything, systemd-resolved and nscd, and reports
+  dnsmasq, unbound and BIND with the command that would reload them rather
+  than reloading them: restarting a resolver can drop the network of the
+  machine, which is worse than a stale cache entry and not what anybody
+  expects from a command called flush. `--force` does not change that.
+- Completions for bash and zsh, installed by `make install` into
+  `share/bash-completion/completions` and `share/zsh/site-functions`.
+- `HOSTS_COMPLETION_MAX_LINES`, defaulting to 5000.
+- `zsh` in the lint job, so that the syntax check of the zsh completion
+  actually runs rather than skipping itself.
+
+### Changed
+
+- Finding no caching resolver is a success, not a failure, and `flush` says
+  why: the C library has no DNS cache of its own, so without a caching daemon
+  a change to the file is already in effect.
+- Completion offers profile names and backup identifiers always, since that
+  means listing a directory, but hostnames only while the file is under the
+  limit: producing them means parsing the file, which on a large blocklist
+  takes seconds and would leave the shell looking hung.
+
 ## [0.5.0] - 2026-07-27
 
 Profiles: named states of the file that can be brought back later.
@@ -217,7 +245,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.3.0...v0.4.0

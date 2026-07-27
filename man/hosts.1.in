@@ -199,6 +199,16 @@ This asks first, because nothing else holds a copy of it.
 Compare the file with a backup, the most recent one by default.
 Removed lines are what the backup holds, added lines what the file holds now.
 Exits with 0 whether or not there are differences.
+.TP
+.B flush
+Clear the cache of the system resolver.
+Often there is nothing to clear, and that is not a failure: the C library has
+no DNS cache of its own, so without a caching daemon in the path a change to
+the file is already in effect.
+Only flushes that cannot disturb anything are performed, namely
+systemd-resolved and nscd; dnsmasq, unbound and BIND are reported with the
+command that would reload them and left alone, because restarting a resolver
+can drop the network of the machine.
 .PP
 Every command accepts
 .B \-\-help
@@ -412,7 +422,23 @@ A profile name becomes part of a filename, so it may hold only letters,
 digits, dot, dash and underscore, may not begin with a dot or a dash, and is
 at most 64 characters.
 That is a question of safety rather than of tidiness.
+.SH COMPLETION
+Completions for bash and zsh are installed by
+.BR "make install" .
+.PP
+Profile names and backup identifiers are always offered, since producing them
+means listing a directory.
+Hostnames are offered only while the file is small enough, because producing
+them means reading and parsing it, and on a file holding a large blocklist
+that takes seconds and would leave the shell looking as though it had hung.
+The limit is 5000 lines and
+.B HOSTS_COMPLETION_MAX_LINES
+changes it.
 .SH ENVIRONMENT
+.TP
+.B HOSTS_COMPLETION_MAX_LINES
+The largest file, in lines, for which the shell completion offers hostnames.
+Defaults to 5000.
 .TP
 .B HOSTS_PROFILE_DIR
 Where profiles are kept.

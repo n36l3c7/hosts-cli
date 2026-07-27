@@ -1,0 +1,134 @@
+#compdef hosts
+#
+# Zsh completion for hosts(1).
+#
+# Install as .../share/zsh/site-functions/_hosts
+#
+# As in the bash completion, profile names and backup identifiers are always
+# offered because listing a directory costs nothing, while hostnames are
+# offered only while the file is small enough: reading and parsing a file
+# holding a large blocklist takes seconds and would leave the shell looking
+# hung.
+
+_hosts_target_file() {
+  local i
+  for ((i = 1; i < CURRENT; i++)); do
+    case ${words[i]} in
+      --file) print -r -- "${words[i + 1]:-/etc/hosts}"; return ;;
+      --file=*) print -r -- "${words[i]#*=}"; return ;;
+    esac
+  done
+  print -r -- /etc/hosts
+}
+
+_hosts_hostnames() {
+  local file limit lines
+  file=$(_hosts_target_file)
+  limit=${HOSTS_COMPLETION_MAX_LINES:-5000}
+
+  [[ -r $file ]] || return
+  lines=$(wc -l <"$file" 2>/dev/null) || return
+  (( lines <= limit )) || return
+
+  local -a names
+  names=(${(f)"$(hosts --file "$file" ls --all 2>/dev/null | cut -f2 | tr ' ' '\n')"})
+  _describe -t hostnames 'hostname' names
+}
+
+_hosts_profiles() {
+  local file
+  file=$(_hosts_target_file)
+  local -a names
+  names=(${(f)"$(hosts --file "$file" profile ls 2>/dev/null | cut -f1)"})
+  _describe -t profiles 'profile' names
+}
+
+_hosts_backups() {
+  local file
+  file=$(_hosts_target_file)
+  local -a ids
+  ids=(${(f)"$(hosts --file "$file" backup ls 2>/dev/null | cut -f2)"})
+  _describe -t backups 'backup' ids
+}
+
+_hosts() {
+  local -a commands
+  commands=(
+    'ls:list the entries'
+    'get:print the addresses a hostname points at'
+    'search:find entries by address, name or comment'
+    'check:lint the file'
+    'export:write the file to stdout'
+    'add:add or update an entry'
+    'rm:remove a name, or every entry for an address'
+    'on:enable the entries carrying a name'
+    'off:disable them without deleting them'
+    'edit:open the file in an editor'
+    'import:merge entries from a file'
+    'block:point domains at a sinkhole address'
+    'backup:take a backup, or list them'
+    'restore:put a backup back in place'
+    'diff:compare the file with a backup'
+    'profile:save, load, list and delete named states'
+    'flush:clear the cache of the system resolver'
+  )
+
+  _arguments -C \
+    '--file[operate on another file]:path:_files' \
+    '--json[machine readable output]' \
+    '--dry-run[show what would happen and write nothing]' \
+    '--no-backup[skip the automatic backup]' \
+    '--force[go ahead with something otherwise refused]' \
+    '(-y --yes)'{-y,--yes}'[answer yes to the confirmations]' \
+    '(-q --quiet)'{-q,--quiet}'[silence diagnostics]' \
+    '(-v --verbose)'{-v,--verbose}'[print diagnostics]' \
+    '(-h --help)'{-h,--help}'[show help]' \
+    '(-V --version)'{-V,--version}'[show the version]' \
+    '1: :->command' \
+    '*:: :->argument'
+
+  case $state in
+    command)
+      _describe -t commands 'hosts command' commands
+      ;;
+    argument)
+      case ${words[1]} in
+        get|rm|on|off)
+          _hosts_hostnames
+          ;;
+        ls)
+          _arguments '--all[list active and disabled entries]' \
+            '--disabled[list only disabled entries]' \
+            '--blocked[include the block section]'
+          ;;
+        check)
+          _arguments '--strict[treat warnings as errors]'
+          ;;
+        block)
+          _arguments '--ipv4-only[use only 0.0.0.0]' \
+            '--to[use this address instead]:address:'
+          ;;
+        backup)
+          _describe -t subcommands 'subcommand' '(ls)'
+          ;;
+        restore|diff)
+          _hosts_backups
+          ;;
+        import)
+          _files
+          ;;
+        profile)
+          if (( CURRENT == 2 )); then
+            _describe -t subcommands 'subcommand' '(save load ls rm)'
+          else
+            case ${words[2]} in
+              load|rm) _hosts_profiles ;;
+            esac
+          fi
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_hosts "$@"

@@ -37,6 +37,9 @@ Profiles:
   profile ls          list the profiles
   profile rm <name>   delete one
 
+Utility:
+  flush               clear the cache of the system resolver
+
 Global options:
   --file <path>       operate on a file other than $DEFAULT_HOSTS_FILE
   --json              machine readable output
@@ -359,6 +362,39 @@ Options:
       --dry-run    show the change and write nothing
   -y, --yes        do not ask for confirmation
   -h, --help       show this help
+EOF
+}
+
+help_flush() {
+  cat <<EOF
+Usage: $PROGRAM_NAME flush [options]
+
+Clear the cache of the system resolver.
+
+Often there is nothing to clear, and that is not a failure. The C library has
+no DNS cache of its own, so on a machine with no caching daemon in the path a
+change to the file is already in effect. When nothing is found, this says so
+and succeeds.
+
+Only flushes that cannot disturb anything are performed: systemd-resolved and
+nscd. Reloading dnsmasq, unbound or BIND is reported with the command that
+would do it, and left to you: restarting a resolver can drop the network of
+the machine, which is a worse outcome than a stale cache entry and not what
+anybody expects from a command called flush. That does not change with
+--force.
+
+Caches kept by browsers are theirs, not the system's, and are not touched.
+
+Output is three tab separated fields:
+
+  resolver <TAB> status <TAB> detail
+
+where status is one of flushed, not-running, needs-attention, would-flush or
+nothing-to-flush.
+
+Options:
+      --dry-run   show what would be run and run nothing
+  -h, --help      show this help
 EOF
 }
 

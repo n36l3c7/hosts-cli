@@ -15,9 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install tools
+        # zsh is needed for the syntax check of the zsh completion, which
+        # cannot be exercised from bash and would otherwise skip itself.
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends shellcheck mandoc
+          sudo apt-get install --yes --no-install-recommends shellcheck mandoc zsh
       - name: Lint
         run: make lint
 
