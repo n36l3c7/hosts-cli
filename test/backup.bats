@@ -29,12 +29,20 @@ EOF
 
 @test "the sidecar records where the backup came from and what it holds" {
   standard_fixture
+
+  # What the mode is depends on the umask of whoever is running: Debian
+  # defaults to 022 and Ubuntu to 002, so a fixture comes out 644 on one and
+  # 664 on the other. What is being tested is that the sidecar records the
+  # mode the file actually has, not a particular number.
+  local expected_mode
+  expected_mode=$(stat -c '%a' "$FIXTURE")
+
   hosts_run backup
   [ "$status" -eq 0 ]
 
   run cat "$(newest_meta)"
   [[ $output == *"target=$FIXTURE"* ]]
-  [[ $output == *'mode=644'* ]]
+  [[ $output == *"mode=$expected_mode"* ]]
   [[ $output == *"owner=$(id -un)"* ]]
   [[ $output == *'sha256='* ]]
   [[ $output == *'time='* ]]

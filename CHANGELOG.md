@@ -58,6 +58,11 @@ to be true.
 - The README no longer implies bash 4.4 is tested. It is the documented floor;
   what the suite runs against is bash 5.1 and 5.2, because nothing still
   supported ships 4.4.
+- A test no longer expects a file to come out mode 644. Debian defaults to a
+  umask of 022 and Ubuntu to 002, so the same fixture is 644 on one and 664 on
+  the other; the sidecar records the mode the file actually has, which is what
+  the test now checks. The portability job found this on its first run, which
+  is the sort of thing it was added for.
 
 ## [1.0.0] - 2026-07-27
 
