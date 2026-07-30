@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A recorded demonstration, in the README and at the top of the documentation
+  site: an `add`, two `rm` and the `ls` between each. `demo/session.sh` runs the
+  commands it prints, against a scratch file rather than `/etc/hosts` so that
+  recording needs no privilege, and `demo/record.sh` turns it into
+  `docs/demo.gif`. Keeping the recipe in the repository means the picture can be
+  regenerated when output changes instead of quietly going stale.
+
 ### Changed
+
+- The documentation site leads with what the program is for. It gained an
+  opening statement, the demonstration, the apt command with a button that
+  copies it, and a navigation bar that follows the page and links to the
+  sections, in place of three links to other pages. The stylesheet is still one
+  hand-written file with no external asset and no font loaded from anywhere
+  else. Every documented section is unchanged.
 
 - The workflows use actions that run on Node 24. The ones in use targeted Node
   20, which the runners have deprecated and were forcing onto 24 anyway: they

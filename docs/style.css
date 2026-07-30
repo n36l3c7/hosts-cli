@@ -1,13 +1,15 @@
-/* hosts-cli documentation site. Single hand-written stylesheet, no external
-   assets, no fonts loaded from third parties, no trackers. */
+/* hosts-cli documentation site. One hand-written stylesheet, no external
+   assets, no fonts loaded from third parties, no trackers. Light by default,
+   with a dark variant for readers whose system asks for one. */
 
 :root {
   --bg: #ffffff;
   --fg: #1c1f24;
   --muted: #5a6270;
-  --rule: #e2e5ea;
+  --rule: #e4e7ec;
   --accent: #1b5fa8;
-  --code-bg: #f5f6f8;
+  --code-bg: #f6f7f9;
+  --button-bg: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,6 +20,7 @@
     --rule: #2b3038;
     --accent: #79b1ef;
     --code-bg: #1d2128;
+    --button-bg: #232830;
   }
 }
 
@@ -27,8 +30,8 @@
 
 body {
   margin: 0 auto;
-  max-width: 46rem;
-  padding: 2.5rem 1.25rem 4rem;
+  max-width: 48rem;
+  padding: 0 1.25rem 5rem;
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -36,47 +39,149 @@ body {
   line-height: 1.65;
 }
 
+a {
+  color: var(--accent);
+}
+
+img {
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+/* --- the top of the page ---------------------------------------------- */
+
 header {
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 2rem;
-  padding-bottom: 1.25rem;
-}
-
-header p.tagline {
-  color: var(--muted);
-  margin: 0.25rem 0 1rem;
-}
-
-nav a {
-  margin-right: 1.25rem;
+  padding-top: 3rem;
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
+header .tagline {
+  color: var(--muted);
+  margin: 0.2rem 0 2.5rem;
+}
+
+/* The claim the whole program is built around, said once and plainly. */
+.hero {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin: 0 0 0.6rem;
+}
+
+.hero em {
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 600;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 1.05rem;
+  margin: 0 0 2rem;
+}
+
+/* --- the install block, with its copy button -------------------------- */
+
+.install {
+  position: relative;
+}
+
+.install pre {
+  padding-right: 5.5rem;
+}
+
+button.copy {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: var(--button-bg);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.6rem;
+}
+
+button.copy:hover {
+  color: var(--fg);
+}
+
+/* --- the demonstration ------------------------------------------------ */
+
+figure {
+  margin: 2rem 0;
+}
+
+figure img {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
+figcaption {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+}
+
+/* --- section navigation ----------------------------------------------- */
+
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 2.5rem -1.25rem 0;
+  padding: 0.7rem 1.25rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.92rem;
+}
+
+nav a {
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+/* --- body ------------------------------------------------------------- */
+
 h2 {
   border-bottom: 1px solid var(--rule);
-  font-size: 1.35rem;
-  margin-top: 2.75rem;
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+  margin-top: 3rem;
   padding-bottom: 0.3rem;
 }
 
 h3 {
-  font-size: 1.1rem;
-  margin-top: 1.75rem;
+  font-size: 1.05rem;
+  margin-top: 2rem;
 }
 
-a {
-  color: var(--accent);
+/* So that following an anchor does not hide the heading behind the nav. */
+h2,
+h3 {
+  scroll-margin-top: 4rem;
 }
 
 code,
 pre {
   font-family: ui-monospace, "Cascadia Code", Consolas, "Liberation Mono",
     monospace;
-  font-size: 0.9em;
+  font-size: 0.88em;
 }
 
 code {
@@ -88,10 +193,10 @@ code {
 pre {
   background: var(--code-bg);
   border: 1px solid var(--rule);
-  border-radius: 5px;
-  line-height: 1.5;
+  border-radius: 6px;
+  line-height: 1.55;
   overflow-x: auto;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1rem;
 }
 
 pre code {
@@ -102,7 +207,7 @@ pre code {
 table {
   border-collapse: collapse;
   display: block;
-  margin: 1rem 0;
+  margin: 1.2rem 0;
   overflow-x: auto;
   width: 100%;
 }
@@ -116,15 +221,15 @@ td {
 }
 
 th {
-  font-size: 0.85rem;
-  letter-spacing: 0.03em;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 blockquote {
-  border-left: 3px solid var(--rule);
+  border-left: 3px solid var(--accent);
   color: var(--muted);
-  margin: 1.25rem 0;
+  margin: 1.4rem 0;
   padding: 0.1rem 0 0.1rem 1rem;
 }
 
@@ -132,6 +237,10 @@ footer {
   border-top: 1px solid var(--rule);
   color: var(--muted);
   font-size: 0.9rem;
-  margin-top: 3.5rem;
+  margin-top: 4rem;
   padding-top: 1.25rem;
+}
+
+footer a {
+  margin-right: 1rem;
 }

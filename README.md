@@ -1,5 +1,8 @@
 # hosts
 
+**One bad write to `/etc/hosts` and the machine resolves nothing.**
+*This one never leaves it half written.*
+
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
@@ -7,6 +10,15 @@ A safe command-line manager for `/etc/hosts`.
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
+
+![A terminal session: listing the entries of a file, adding one for 10.0.0.5,
+listing again to see it, removing its alias and then its name, and listing once
+more to see the line gone.](docs/demo.gif)
+
+Every command in the recording is a command that ran. It works on a scratch file
+rather than `/etc/hosts` so that recording needs no privilege; the recipe is
+[`demo/record.sh`](demo/record.sh), kept in the repository so the picture can be
+regenerated instead of quietly becoming a lie.
 
 ## What it does
 
