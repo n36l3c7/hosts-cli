@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The workflows use actions that run on Node 24. The ones in use targeted Node
+  20, which the runners have deprecated and were forcing onto 24 anyway: they
+  worked, and one day they would not have. `checkout` went to v7 and the two
+  Pages actions to v5, further along than expected, so the versions were
+  looked up and the moving major tags checked rather than guessed at.
+
 ### Fixed
 
 - Every released version is installable from the apt repository, not only the
