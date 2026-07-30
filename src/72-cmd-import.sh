@@ -44,7 +44,7 @@ cmd_import() {
   fi
   source=${positional[0]:-'-'}
 
-  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
+  open_for_write "$OPT_FILE" target
 
   _import_read_source "$source"
 

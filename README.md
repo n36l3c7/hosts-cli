@@ -3,7 +3,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -28,8 +28,8 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `1.0.0`, which is a promise rather than a claim that the work is over:
-from here, breaking any of the following costs a major version.
+This is `1.0.1`. The major version is a promise rather than a claim that the
+work is over: breaking any of the following costs a new one.
 
 - The exit codes `0` to `8`.
 - The tab-separated text output of `ls`, `search`, `check`, `backup ls`,
@@ -48,11 +48,15 @@ from here, breaking any of the following costs a major version.
 | 5 | `profile save`, `profile load`, `profile ls`, `profile rm` | released in 0.5.0 |
 | 6 | `flush`, shell completions | released in 0.6.0 |
 | 7 | Debian package and APT repository | released in 1.0.0 |
+| 8 | Verification: interruption, concurrency, hostile input, four distributions | released in 1.0.1 |
 
 ## Requirements
 
 - Linux with GNU coreutils.
-- Bash 4.4 or newer. The program refuses to run on anything older.
+- Bash 4.4 or newer. The program refuses to run on anything older, and the
+  suite is run on every push against Debian 11 and 12 and Ubuntu 22.04 and
+  24.04, which is bash 5.1 and 5.2. 4.4 is the documented floor, not a tested
+  one: nothing still supported ships it.
 
 Two soft dependencies, neither of which stops the program working:
 
@@ -382,11 +386,26 @@ An extended ACL cannot be carried over by a rename, so a file that has one is
 refused with exit `6` unless `--force` is given. Losing an ACL changes who can
 read and write the file, which is too quiet a way to change a permission.
 
-Concurrent writers are serialised with `flock` when it is there, and not
-serialised when it is not. A lock built out of `mkdir` would have to guess
-whether a leftover lock belongs to a live process, and guessing wrong leaves
-the tool stuck for good — a worse outcome than the problem, since two
-concurrent writers can only lose an update, never damage the file.
+Concurrent writers are serialised with `flock` when it is there. The lock is
+taken **before the file is read** and held until the new content is in place,
+which is the part that matters: two writers that both read before either
+writes each compute their change from the same starting point, and the second
+rename then throws the first change away. Serialising only the writes would
+prevent nothing, because the rename had already made those indivisible — the
+update that gets lost is lost during the read. There is a test that runs two
+writers at once against a file large enough for the race to be certain rather
+than merely possible.
+
+`hosts edit` holds that lock for as long as the editor is open. Another writer
+waits ten seconds and then fails saying so, which is the right outcome: the
+alternative is discarding one of the two changes.
+
+Without `flock` writes are not serialised at all, and a concurrent write can
+lose an update — but it still cannot damage the file, because the rename is
+atomic either way. A lock built out of `mkdir` was considered and rejected: it
+would have to guess whether a leftover lock belongs to a live process, and
+guessing wrong leaves the tool stuck for good, which is worse than the problem
+it solves.
 
 ## Backups
 

@@ -59,7 +59,7 @@ cmd_add() {
     die "$EX_VALIDATION" "not a valid hostname: $name"
   done
 
-  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
+  open_for_write "$OPT_FILE" target
   hostsfile_load "$target"
 
   # Work out, for every name, whether it is already where it should be, in the

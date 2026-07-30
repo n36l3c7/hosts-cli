@@ -32,7 +32,7 @@ cmd_restore() {
     die_usage 'restore ' 'restore accepts at most one backup'
   fi
 
-  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
+  open_for_write "$OPT_FILE" target
 
   backup_resolve_id "$target" "${positional[0]:-}" id
   backup_dir_for "$target" directory

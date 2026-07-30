@@ -28,7 +28,7 @@ cmd_edit() {
     die_usage 'edit ' 'edit has nothing to preview; use --file to work on a copy'
   fi
 
-  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
+  open_for_write "$OPT_FILE" target
 
   # Fail before the editor opens rather than after the work is done.
   local directory=${target%/*}

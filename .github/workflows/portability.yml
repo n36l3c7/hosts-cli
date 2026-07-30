@@ -1,0 +1,70 @@
+name: Portability
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  distro:
+    # The README says Linux and bash 4.4 or newer. Everything else has only
+    # ever run on one Ubuntu, which means every assumption about stat, date,
+    # realpath, sync, flock and install has been taken on trust. This runs the
+    # whole suite on the oldest distributions still supported and on the
+    # current ones, so the claim is tested rather than asserted.
+    name: ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - debian:11
+          - debian:12
+          - ubuntu:22.04
+          - ubuntu:24.04
+
+    steps:
+      - name: Install what the suite needs
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends \
+            ca-certificates curl git make \
+            acl diffutils util-linux coreutils procps
+
+      - uses: actions/checkout@v4
+
+      - name: Install a bats new enough for this suite
+        # Debian 11 and Ubuntu 22.04 carry bats 1.2, and the suite needs the
+        # 1.5 that brought "run --separate-stderr" and BATS_TEST_TMPDIR. A
+        # pinned release is fetched rather than depending on what each
+        # distribution happens to package.
+        run: |
+          version=1.11.1
+          curl -fsSL -o /tmp/bats.tar.gz \
+            "https://github.com/bats-core/bats-core/archive/refs/tags/v${version}.tar.gz"
+          tar -xzf /tmp/bats.tar.gz -C /tmp
+          "/tmp/bats-core-${version}/install.sh" /usr/local
+          bats --version
+
+      - name: Say what this is actually running on
+        run: |
+          . /etc/os-release && echo "$PRETTY_NAME"
+          bash --version | head -1
+          dpkg-query -W -f='${Package} ${Version}\n' \
+            coreutils util-linux diffutils acl
+
+      - name: Test as an ordinary user
+        # A container runs as root, and root can read and write anything, so
+        # the tests about refused permissions would all skip themselves. They
+        # are a good part of what is worth checking on another distribution.
+        run: |
+          useradd --create-home tester
+          chown -R tester:tester .
+          su tester -c 'make test'
