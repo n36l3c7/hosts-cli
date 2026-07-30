@@ -51,9 +51,9 @@
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>1.0.0</code>, which is a promise rather than a claim that
-        the work is over: from here, breaking any of the following costs a
-        major version.
+        This is <code>1.0.1</code>. The major version is a promise rather than a
+        claim that the work is over: breaking any of the following costs a new
+        one.
       </p>
       <ul>
         <li>The exit codes <code>0</code> to <code>8</code>.</li>
@@ -70,7 +70,6 @@
           stores, including the sidecar format.
         </li>
       </ul>
-      <p>
       <table>
         <thead>
           <tr>
@@ -119,6 +118,12 @@
             <td>Debian package and APT repository</td>
             <td>released in 1.0.0</td>
           </tr>
+          <tr>
+            <td>8</td>
+            <td>Verification: interruption, concurrency, hostile input,
+              four distributions</td>
+            <td>released in 1.0.1</td>
+          </tr>
         </tbody>
       </table>
 
@@ -126,7 +131,10 @@
       <ul>
         <li>Linux with GNU coreutils.</li>
         <li>
-          Bash 4.4 or newer. The program refuses to run on anything older.
+          Bash 4.4 or newer. The program refuses to run on anything older, and
+          the suite is run on every push against Debian 11 and 12 and Ubuntu
+          22.04 and 24.04, which is bash 5.1 and 5.2. 4.4 is the documented
+          floor, not a tested one: nothing still supported ships it.
         </li>
       </ul>
       <p>Two soft dependencies, neither of which stops the program working:</p>
@@ -835,11 +843,30 @@ man hosts</code></pre>
       </p>
       <p>
         Concurrent writers are serialised with <code>flock</code> when it is
-        there, and not serialised when it is not. A lock built out of
-        <code>mkdir</code> would have to guess whether a leftover lock belongs
-        to a live process, and guessing wrong leaves the tool stuck for good: a
-        worse outcome than the problem, since two concurrent writers can only
-        lose an update, never damage the file.
+        there. The lock is taken <strong>before the file is read</strong> and
+        held until the new content is in place, which is the part that matters:
+        two writers that both read before either writes each compute their
+        change from the same starting point, and the second rename then throws
+        the first change away. Serialising only the writes would prevent
+        nothing, because the rename had already made those indivisible &mdash;
+        the update that gets lost is lost during the read. There is a test that
+        runs two writers at once against a file large enough for the race to be
+        certain rather than merely possible.
+      </p>
+      <p>
+        <code>hosts edit</code> holds that lock for as long as the editor is
+        open. Another writer waits ten seconds and then fails saying so, which
+        is the right outcome: the alternative is discarding one of the two
+        changes.
+      </p>
+      <p>
+        Without <code>flock</code> writes are not serialised at all, and a
+        concurrent write can lose an update &mdash; but it still cannot damage
+        the file, because the rename is atomic either way. A lock built out of
+        <code>mkdir</code> was considered and rejected: it would have to guess
+        whether a leftover lock belongs to a live process, and guessing wrong
+        leaves the tool stuck for good, which is worse than the problem it
+        solves.
       </p>
 
       <h2 id="backups">Backups</h2>
@@ -1043,7 +1070,7 @@ make clean</code></pre>
 
     <footer>
       <p>
-        hosts 1.0.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 1.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

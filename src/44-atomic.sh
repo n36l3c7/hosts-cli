@@ -41,6 +41,12 @@ atomic_cleanup() {
 atomic_lock() {
   local target=$1 lock_path
 
+  # Taking it twice in one run would open a second descriptor on the same file
+  # and then wait for a lock this very process is holding.
+  if [[ -n $ATOMIC_LOCK_FD ]]; then
+    return 0
+  fi
+
   if ! have_command flock; then
     info 'flock is not available: concurrent writes are not serialised'
     return 0
@@ -59,6 +65,30 @@ atomic_lock() {
   fi
 
   return 0
+}
+
+# Resolve the file a command is about to change, and take the lock before
+# anything has read it.
+#
+# The lock has to cover the read as well as the write. Two writers that both
+# read before either writes each compute their change from the same starting
+# point, and the second rename then throws the first change away. Serialising
+# only the writes prevents nothing, because the rename had already made those
+# indivisible: the update that gets lost is lost during the read.
+#
+# A command that only reads the file does not call this, and is never blocked
+# by it.
+# The name is handed straight on rather than through a local of its own. An
+# intermediate here would have to be named, and a name shared with a local of
+# the function being called shadows the caller's variable: the underscore
+# prefix guards against the names a caller would choose, not against two of
+# these functions choosing the same one.
+open_for_write() {
+  local _path=$1
+  local -n _out_target=$2
+
+  resolve_path "$_path" "$2" || die "$EX_ERROR" "cannot resolve $_path"
+  atomic_lock "$_out_target"
 }
 
 # Prepare a write to the given file, leaving the new content to be written

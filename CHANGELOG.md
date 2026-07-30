@@ -7,14 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-30
+
+Verification of what 1.0.0 already claimed, and one claim that turned out not
+to be true.
+
 ### Fixed
 
+- Concurrent writers no longer lose each other's work. The lock was taken
+  inside the write, after the file had already been read, so two writers each
+  computed their change from the same starting point and the second one
+  discarded the first. Serialising the writes prevented nothing, the rename
+  having already made those indivisible: the update that got lost was lost
+  during the read. The lock is now taken before the file is read and held
+  until the new content is in place. 0.2.0 documented the protection this
+  provides; it did not provide it.
+- `hosts edit` holds that lock for as long as the editor is open, so another
+  writer waits and then fails saying so rather than quietly discarding one of
+  the two changes.
 - The apt index is rebuilt after a release again. It was chained to the
   release event, which a release created by a workflow using the built-in
   token never raises: GitHub suppresses those so that workflows cannot
   trigger each other in a loop. It now chains to the release workflow itself,
   which is the mechanism meant for it. The index for 1.0.0 was published by
   running the workflow by hand.
+
+### Added
+
+- Tests that kill a write partway through, at a different point on each pass,
+  and require the file to hold either the whole of the old content or the
+  whole of the new one. That guarantee is the one the whole program rests on
+  and had only ever been reasoned about.
+- A test that runs two writers at once against a file large enough for the
+  race to be certain rather than merely possible. It is what found the lock
+  defect above.
+- Tests that put the parser against input it was not written for: control
+  bytes, addresses and names that nearly parse, lines of only whitespace, and
+  a very long line. Three invariants are checked, the strongest being that
+  `export` gives back exactly the bytes that were read. The generator is
+  seeded so a failure can be reproduced. Nothing was found, which is also
+  information.
+- A portability job that runs the whole suite on Debian 11 and 12 and Ubuntu
+  22.04 and 24.04, as an ordinary user rather than as root so that the tests
+  about refused permissions do not skip themselves. Everything had until now
+  only ever run on one Ubuntu, which left every assumption about `stat`,
+  `date`, `realpath`, `sync`, `flock` and `install` untested.
+
+### Changed
+
+- The README no longer implies bash 4.4 is tested. It is the documented floor;
+  what the suite runs against is bash 5.1 and 5.2, because nothing still
+  supported ships 4.4.
 
 ## [1.0.0] - 2026-07-27
 
@@ -287,7 +330,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.4.1...v0.5.0

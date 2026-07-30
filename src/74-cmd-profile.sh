@@ -73,7 +73,7 @@ _profile_load() {
   name=$1
   profile_check_name "$name"
 
-  resolve_path "$OPT_FILE" target || die "$EX_ERROR" "cannot resolve $OPT_FILE"
+  open_for_write "$OPT_FILE" target
 
   if ! profile_exists "$target" "$name"; then
     die "$EX_NOTFOUND" "there is no profile $name for $target"

@@ -346,13 +346,28 @@ is given.
 .PP
 Writers are serialised with
 .BR flock (1)
-when it is available, and not serialised when it is not.
+when it is available.
+The lock is taken before the file is read and held until the new content is in
+place, which is the part that matters: two writers that both read before
+either writes each compute their change from the same starting point, and the
+second rename then throws the first change away.
+Serialising only the writes would prevent nothing, the rename having already
+made those indivisible.
+.PP
+.B edit
+holds that lock for as long as the editor is open, and another writer waits ten
+seconds and then fails saying so.
+Discarding one of the two changes instead would be worse.
+.PP
+Without
+.BR flock (1)
+writes are not serialised and a concurrent write can lose an update, though it
+still cannot damage the file.
 A lock built out of
 .BR mkdir (1)
 would have to guess whether a leftover lock belongs to a live process, and
-guessing wrong leaves the tool stuck for good: a worse outcome than the
-problem, because two concurrent writers can only lose an update, never damage
-the file.
+guessing wrong leaves the tool stuck for good: worse than the problem it
+solves.
 .SH BLOCK SECTION
 Blocked domains are kept together at the end of the file, between two markers:
 .PP
