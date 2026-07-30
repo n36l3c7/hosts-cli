@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Every released version is installable from the apt repository, not only the
+  most recent one. `dpkg-scanpackages` reports one version per package unless
+  told otherwise, so earlier `.deb` files were being published and then left
+  out of the index: present but not installable, which is not what "the index
+  is rebuilt from every release" was meant to mean.
+
 ## [1.0.1] - 2026-07-30
 
 Verification of what 1.0.0 already claimed, and one claim that turned out not

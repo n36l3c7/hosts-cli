@@ -66,7 +66,11 @@ jobs:
           # Before the first release there is nothing to index, and an empty
           # Packages file is a valid one.
           if compgen -G 'pool/main/*.deb' >/dev/null; then
-            dpkg-scanpackages --arch all pool/main \
+            # --multiversion, or only the newest version of the package reaches
+            # the index and every earlier one becomes a file nobody can
+            # install: the point of rebuilding from all the releases is that a
+            # version stays installable, not merely present.
+            dpkg-scanpackages --multiversion --arch all pool/main \
               >dists/stable/main/binary-all/Packages
           else
             : >dists/stable/main/binary-all/Packages
