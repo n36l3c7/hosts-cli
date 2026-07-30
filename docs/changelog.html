@@ -28,6 +28,88 @@
         <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.
       </p>
 
+      <h2 id="v1-1-0">1.1.0 &mdash; 2026-07-30</h2>
+      <p>
+        <code>check</code> can now repair what it finds, for the findings where
+        the repair is not a guess.
+      </p>
+      <h3>Added</h3>
+      <ul>
+        <li>
+          <code>check --fix</code> repairs five of the eleven rules:
+          <code>duplicate-entry</code>, by removing the later line;
+          <code>duplicate-name</code>, by taking the redundant name off the line
+          and dropping the line if that leaves it with nothing but an address;
+          <code>missing-loopback</code> and <code>missing-loopback6</code>, by
+          adding the entry above the first entry the file has, or at the end when
+          it has none; and <code>missing-trailing-newline</code>.
+        </li>
+        <li>
+          The other six are left alone deliberately, and that line is the
+          feature. An address or a name that does not parse cannot be repaired
+          without inventing one. <code>conflicting-ip</code> is the one that
+          tempts: two lines send a name to two addresses, and which of them is
+          wanted is knowledge the file does not contain.
+          <code>control-character</code> is left because stripping bytes out of a
+          line in silence would destroy the evidence of what happened to it.
+        </li>
+        <li>
+          It is a write like the others: it takes the lock before the read, backs
+          up first, honours <code>--dry-run</code> and <code>--no-backup</code>,
+          and asks before touching more than one line unless <code>--yes</code>
+          is given. A file with nothing to fix is not written to at all.
+        </li>
+        <li>
+          <code>summary.fixed</code> in the JSON output of <code>check</code>,
+          always present so the shape of the document does not depend on the
+          flags. The schema version stays at 1: fields are added within a
+          version, and a reader should ignore what it does not recognise.
+        </li>
+        <li>
+          A fuzzing pass over the fix itself: hostile input is fixed, the result
+          is still a file the program reads, and fixing it a second time changes
+          nothing.
+        </li>
+        <li>
+          A recorded demonstration, in the README and at the top of this site.
+          Every command shown is a command that ran, and the recipe is kept in
+          the repository so the picture can be regenerated instead of quietly
+          going stale.
+        </li>
+      </ul>
+      <h3>Changed</h3>
+      <ul>
+        <li>
+          After a fix the file is read and scanned again rather than the earlier
+          findings being renumbered onto it. Removing lines moves everything
+          below them, so a leftover finding would otherwise have been reported
+          against a line that is now something else, and a message naming another
+          line would have named the wrong one.
+        </li>
+        <li>
+          This site leads with what the program is for: an opening statement, the
+          demonstration, the apt command with a button that copies it, and a
+          navigation bar that follows the page.
+        </li>
+        <li>
+          The workflows use actions that run on Node 24, which the runners were
+          forcing them onto anyway.
+        </li>
+      </ul>
+      <h3>Fixed</h3>
+      <ul>
+        <li>
+          The navigation bar of this site stays on screen. It was the last child
+          of the header, and a sticky element is confined to its containing
+          block, so it came unstuck the moment the header scrolled past.
+        </li>
+        <li>
+          Every released version is installable from the apt repository, not only
+          the most recent one. <code>dpkg-scanpackages</code> reports one version
+          per package unless told otherwise.
+        </li>
+      </ul>
+
       <h2 id="v1-0-1">1.0.1 &mdash; 2026-07-30</h2>
       <p>
         Verification of what 1.0.0 already claimed, and one claim that turned
@@ -533,7 +615,7 @@
         <a href="https://github.com/n36l3c7/hosts-cli/issues">Issues</a>
       </p>
       <p>
-        hosts 1.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 1.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

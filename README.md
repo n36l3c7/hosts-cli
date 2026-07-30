@@ -6,7 +6,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -40,7 +40,7 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `1.0.1`. The major version is a promise rather than a claim that the
+This is `1.1.0`. The major version is a promise rather than a claim that the
 work is over: breaking any of the following costs a new one.
 
 - The exit codes `0` to `8`.
@@ -61,6 +61,7 @@ work is over: breaking any of the following costs a new one.
 | 6 | `flush`, shell completions | released in 0.6.0 |
 | 7 | Debian package and APT repository | released in 1.0.0 |
 | 8 | Verification: interruption, concurrency, hostile input, four distributions | released in 1.0.1 |
+| 9 | `check --fix` | released in 1.1.0 |
 
 ## Requirements
 
@@ -137,6 +138,7 @@ hosts get staging                 # just the address, ready to capture
 hosts search "staging box"        # match on address, names or comments
 hosts check                       # lint the file
 hosts --file ./hosts.new check --strict
+sudo hosts check --fix            # repair what has only one repair
 
 sudo hosts add 10.0.0.5 staging staging.local
 sudo hosts off staging            # keep the line, stop it resolving
@@ -160,7 +162,7 @@ man hosts
 | `ls [pattern]` | list entries, filtered by a glob on the names |
 | `get <hostname>` | print the addresses a hostname points at |
 | `search <text>` | find entries by address, name or comment |
-| `check` | lint the file |
+| `check` | lint the file, and with `--fix` repair what has one repair |
 | `export` | write the file to stdout |
 | `add <ip> <name>...` | add or update an entry |
 | `rm <name\|ip>` | remove a name, or every entry for an address |
@@ -229,19 +231,19 @@ warning is something untidy or merely suspect. `check` has to be usable in CI
 against files it did not write, so anything with a legitimate reading stays a
 warning.
 
-| Rule | Severity | Meaning |
-| --- | --- | --- |
-| `invalid-line` | error | not an address followed by a hostname |
-| `invalid-ip` | error | the address does not parse |
-| `invalid-hostname` | error | the name breaks RFC 1123 |
-| `control-character` | error | the line contains a control character |
-| `duplicate-entry` | error | an earlier line is identical |
-| `duplicate-name` | warning | the name already points at that address |
-| `conflicting-ip` | warning | the name points elsewhere in the same family |
-| `nonstandard-hostname` | warning | the name uses an underscore |
-| `missing-loopback` | warning | no active `127.0.0.1 localhost` |
-| `missing-loopback6` | warning | no active `::1 localhost` |
-| `missing-trailing-newline` | warning | the file does not end with a newline |
+| Rule | Severity | `--fix` | Meaning |
+| --- | --- | --- | --- |
+| `invalid-line` | error | no | not an address followed by a hostname |
+| `invalid-ip` | error | no | the address does not parse |
+| `invalid-hostname` | error | no | the name breaks RFC 1123 |
+| `control-character` | error | no | the line contains a control character |
+| `duplicate-entry` | error | **yes** | an earlier line is identical |
+| `duplicate-name` | warning | **yes** | the name already points at that address |
+| `conflicting-ip` | warning | no | the name points elsewhere in the same family |
+| `nonstandard-hostname` | warning | no | the name uses an underscore |
+| `missing-loopback` | warning | **yes** | no active `127.0.0.1 localhost` |
+| `missing-loopback6` | warning | **yes** | no active `::1 localhost` |
+| `missing-trailing-newline` | warning | **yes** | the file does not end with a newline |
 
 The same name on an IPv4 and on an IPv6 address is normal dual stack and is
 not reported: a rule blind to the address family would flag every healthy
@@ -255,6 +257,34 @@ parser of an editor can consume them directly:
 /etc/hosts:14: error: duplicate-entry: identical to the entry on line 12
 /etc/hosts: warning: missing-loopback6: no active entry maps ::1 to localhost
 ```
+
+#### Fixing
+
+`--fix` repairs the findings whose repair the finding itself forces, and only
+those — the five marked above. It removes a duplicate entry, takes a redundant
+name off a line and drops the line if that leaves it with nothing but an
+address, adds a missing loopback entry above the first entry the file has, and
+adds a missing final newline.
+
+The rest are left alone on purpose. An address or a name that does not parse
+cannot be repaired without inventing one. `conflicting-ip` is the one that
+tempts: two lines send a name to two addresses, and which of them is wanted is
+knowledge the file does not contain. `control-character` is left because
+stripping bytes out of a line in silence would destroy the evidence of what
+happened to it.
+
+```sh
+sudo hosts check --fix              # repair what has one repair
+hosts --file ./hosts.new check --fix --dry-run
+```
+
+After a fix the file is read and scanned again rather than the earlier findings
+being patched up, so every line number and every message refers to the file as
+it now is. What is left is printed as usual and still decides the exit code:
+`hosts check --fix` in CI fails exactly when something a person has to look at
+is still there. Fixing takes a backup first, honours `--dry-run` and
+`--no-backup`, and asks before touching more than one line unless `--yes` is
+given.
 
 ### Addresses and names
 
@@ -581,6 +611,10 @@ outside ASCII are passed through unchanged, so comments stay readable.
 `check --json` replaces `entries` with `summary` and `findings`; `export
 --json` reports every line, comments and blank lines included, distinguished
 by `kind`.
+
+Fields are added within a schema version and never change meaning or disappear
+without the version being raised, so a reader should ignore what it does not
+recognise rather than reject it. `summary.fixed` arrived that way in 1.1.0.
 
 ## Development
 

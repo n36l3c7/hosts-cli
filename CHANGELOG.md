@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-30
+
+`check` can now repair what it finds, for the findings where the repair is not a
+guess.
+
 ### Added
+
+- `check --fix` repairs five of the eleven rules: `duplicate-entry`, by removing
+  the later line; `duplicate-name`, by taking the redundant name off the line
+  and dropping the line if that leaves it with nothing but an address;
+  `missing-loopback` and `missing-loopback6`, by adding the entry above the
+  first entry the file has, or at the end when it has none; and
+  `missing-trailing-newline`.
+
+  The other six are left alone deliberately, and that line is the feature. An
+  address or a name that does not parse cannot be repaired without inventing
+  one. `conflicting-ip` is the one that tempts: two lines send a name to two
+  addresses, and which of them is wanted is knowledge the file does not contain.
+  `control-character` is left because stripping bytes out of a line in silence
+  would destroy the evidence of what happened to it.
+
+  It is a write like the others: it takes the lock before the read, backs up
+  first, honours `--dry-run` and `--no-backup`, and asks before touching more
+  than one line unless `--yes` is given. A file with nothing to fix is not
+  written to at all. A line the fix did not touch is byte for byte what it was,
+  which is the existing guarantee rather than a new one.
+
+- `summary.fixed` in the JSON output of `check`, counting what was repaired,
+  and always present so the shape of the document does not depend on the flags.
+  The schema version stays at 1: fields are added within a version, and a
+  reader should ignore what it does not recognise. `--fix` with `--dry-run` is
+  refused under `--json`, because the preview is a diff on standard output and
+  would leave the document unparseable.
+
+- A fuzzing pass over the fix itself: hostile input is fixed, the result is
+  still a file the program reads, and fixing it a second time changes nothing.
 
 - A recorded demonstration, in the README and at the top of the documentation
   site: an `add`, two `rm` and the `ls` between each. `demo/session.sh` runs the
@@ -17,6 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   regenerated when output changes instead of quietly going stale.
 
 ### Changed
+
+- After a fix the file is read and scanned again rather than the earlier
+  findings being renumbered onto it. Removing lines moves everything below them,
+  so a leftover finding would otherwise have been reported against a line that
+  is now something else, and a message naming another line would have named the
+  wrong one. Scanning again makes every number and message right by
+  construction, and reports anything a fix itself introduced.
 
 - The documentation site leads with what the program is for. It gained an
   opening statement, the demonstration, the apt command with a button that
@@ -32,6 +74,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   looked up and the moving major tags checked rather than guessed at.
 
 ### Fixed
+
+- The navigation bar of the documentation site stays on screen. It was the last
+  child of the header, and a sticky element is confined to its containing block,
+  so it came unstuck the moment the header scrolled past.
 
 - Every released version is installable from the apt repository, not only the
   most recent one. `dpkg-scanpackages` reports one version per package unless
@@ -367,7 +413,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.5.0...v0.6.0

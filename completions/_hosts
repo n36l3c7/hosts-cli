@@ -102,7 +102,8 @@ _hosts() {
             '--blocked[include the block section]'
           ;;
         check)
-          _arguments '--strict[treat warnings as errors]'
+          _arguments '--strict[treat warnings as errors]' \
+            '--fix[repair the findings that have only one possible repair]'
           ;;
         block)
           _arguments '--ipv4-only[use only 0.0.0.0]' \

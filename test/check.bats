@@ -290,7 +290,7 @@ EOF
   [ "${lines[0]}" = '{' ]
   [ "${lines[1]}" = '  "version": 1,' ]
   [ "${lines[2]}" = "  \"file\": \"$FIXTURE\"," ]
-  [ "${lines[3]}" = '  "summary": { "errors": 1, "warnings": 0 },' ]
+  [ "${lines[3]}" = '  "summary": { "errors": 1, "warnings": 0, "fixed": 0 },' ]
   [ "${lines[4]}" = '  "findings": [' ]
   [ "${lines[5]}" = '    {' ]
   [ "${lines[6]}" = '      "rule": "duplicate-entry",' ]
@@ -318,7 +318,7 @@ EOF
   clean_fixture
   hosts_run --json check
   [ "$status" -eq 0 ]
-  [[ $output == *'"summary": { "errors": 0, "warnings": 0 },'* ]]
+  [[ $output == *'"summary": { "errors": 0, "warnings": 0, "fixed": 0 },'* ]]
   [[ $output == *'"findings": []'* ]]
 }
 
@@ -327,4 +327,346 @@ EOF
   hosts_run check something
   [ "$status" -eq 2 ]
   [[ $stderr == *'takes no argument'* ]]
+}
+
+# --- check --fix ------------------------------------------------------------
+#
+# The whole point of the flag is the line between what a machine may decide and
+# what only the person reading the file can, so most of what follows is about
+# what it declines to touch.
+
+@test "a clean file is not written to at all" {
+  clean_fixture
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+  # Nothing was written, so nothing was backed up either.
+  [ ! -d "$(fixture_backup_dir)" ] || [ -z "$(ls -A "$(fixture_backup_dir)")" ]
+}
+
+@test "a duplicate entry loses the later line and keeps the first" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+EOF
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^10\.0\.0\.9' "$FIXTURE")" -eq 1 ]
+  [ "$(wc -l <"$FIXTURE")" -eq 3 ]
+}
+
+@test "a redundant name comes off the line and the layout of the rest survives" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.5    staging   staging.local
+10.0.0.5 staging other
+EOF
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  # The line nobody asked to touch is byte for byte what it was.
+  [[ $(sed -n '3p' "$FIXTURE") == '10.0.0.5    staging   staging.local' ]]
+  [[ $(sed -n '4p' "$FIXTURE") == '10.0.0.5 other' ]]
+}
+
+@test "a line left with nothing but an address is removed" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.5 staging
+10.0.0.5 staging
+EOF
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  [ "$(wc -l <"$FIXTURE")" -eq 3 ]
+  [[ $(cat "$FIXTURE") != *'10.0.0.5'$'\n'* ]]
+}
+
+@test "a name written twice on one line loses the second" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.1 dup dup other
+EOF
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  [[ $(sed -n '3p' "$FIXTURE") == '10.0.0.1 dup other' ]]
+}
+
+@test "a line repeating several names of an earlier one is fixed in one pass" {
+  # The scan reports one finding for the line; the fix has to deal with every
+  # name on it or running the command again would keep finding more.
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.1 one two three
+10.0.0.1 one two four
+EOF
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  [[ $(sed -n '4p' "$FIXTURE") == '10.0.0.1 four' ]]
+  hosts_run check
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "missing loopback entries go above the first entry the file has" {
+  make_fixture <<'EOF'
+# my hosts file
+
+10.0.0.9 build
+EOF
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [[ $(sed -n '1p' "$FIXTURE") == '# my hosts file' ]]
+  [[ $(sed -n '3p' "$FIXTURE") == $'127.0.0.1\tlocalhost' ]]
+  [[ $(sed -n '4p' "$FIXTURE") == $'::1\tlocalhost ip6-localhost' ]]
+  [[ $(sed -n '5p' "$FIXTURE") == '10.0.0.9 build' ]]
+}
+
+@test "loopback entries are appended when the file has no entry to go above" {
+  make_fixture <<'EOF'
+# nothing but a comment
+EOF
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [[ $(sed -n '2p' "$FIXTURE") == $'127.0.0.1\tlocalhost' ]]
+  [[ $(sed -n '3p' "$FIXTURE") == $'::1\tlocalhost ip6-localhost' ]]
+}
+
+@test "an empty file is given both loopback entries" {
+  : >"$FIXTURE"
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [ "$(wc -l <"$FIXTURE")" -eq 2 ]
+}
+
+@test "a missing final newline is added, touching one line and asking nothing" {
+  printf '127.0.0.1\tlocalhost\n::1\tlocalhost ip6-localhost' >"$FIXTURE"
+  # No --yes: a single line is narrow enough to go ahead without a question.
+  hosts_run check --fix </dev/null
+  [ "$status" -eq 0 ]
+  [ "$(tail -c 1 "$FIXTURE" | od -An -c | tr -d ' ')" = '\n' ]
+}
+
+@test "conflicting-ip is never fixed: which address is wanted is not in the file" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.1 shared
+10.0.0.2 shared
+EOF
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+  assert_finding warning conflicting-ip 4
+}
+
+@test "an address that does not parse is left alone and still fails the run" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+999.1.1.1 bogus
+EOF
+  hosts_run check --fix --yes
+  [ "$status" -eq 4 ]
+  assert_finding error invalid-ip 3
+  [[ $(sed -n '3p' "$FIXTURE") == '999.1.1.1 bogus' ]]
+}
+
+@test "a control character is reported, not stripped out in silence" {
+  printf '127.0.0.1\tlocalhost\n::1\tlocalhost ip6-localhost\n10.0.0.1\tbu\001ild\n' \
+    >"$FIXTURE"
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run check --fix --yes
+  [ "$status" -eq 4 ]
+  [[ $output == *control-character* ]]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+}
+
+@test "a leftover finding is reported against the line it is now on" {
+  # The fix moves lines up. Reporting the number a finding had beforehand would
+  # send an editor to a line that is now something else.
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+192.168.1.1 router other_host
+EOF
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  # other_host was on line 5 and is on line 4 now.
+  assert_finding warning nonstandard-hostname 4
+  [[ $output != *':5:'* ]]
+}
+
+@test "a message naming another line names it as the file now numbers it" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+10.0.0.1 shared
+10.0.0.2 shared
+EOF
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  # The conflict is between what were lines 5 and 6 and are now 4 and 5.
+  assert_finding warning conflicting-ip 5
+  [[ $output == *'on line 4'* ]]
+}
+
+@test "fixing twice changes nothing the second time" {
+  make_fixture <<'EOF'
+# a header
+10.0.0.9 build
+10.0.0.9 build
+10.0.0.5    staging   staging.local
+10.0.0.5 staging
+EOF
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  local once
+  once=$(cat "$FIXTURE")
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [ "$(cat "$FIXTURE")" = "$once" ]
+}
+
+@test "--dry-run writes nothing and reports the file as it stands" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+EOF
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run --verbose check --fix --dry-run --yes
+  [ "$status" -eq 4 ]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+  # The finding still holds, because the file still has it.
+  assert_finding error duplicate-entry 4
+  # A dry run repaired nothing, whatever it reports it could repair.
+  [[ $stderr == *'1 fixable'* ]]
+  [[ $stderr != *' fixed,'* ]]
+}
+
+@test "--fix and --dry-run are refused with --json, which the preview would break" {
+  clean_fixture
+  hosts_run --json check --fix --dry-run
+  [ "$status" -eq 2 ]
+  [[ $stderr == *'not JSON'* ]]
+}
+
+@test "the JSON summary counts what was fixed" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+EOF
+  hosts_run --json check --fix
+  [ "$status" -eq 0 ]
+  [[ $output == *'"summary": { "errors": 0, "warnings": 0, "fixed": 1 },'* ]]
+  [[ $output == *'"findings": []'* ]]
+}
+
+@test "a backup is taken before the file is fixed" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+EOF
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run check --fix
+  [ "$status" -eq 0 ]
+  [ "$(cat "$(newest_copy)")" = "$before" ]
+}
+
+@test "--no-backup fixes without taking one" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+10.0.0.9 build
+EOF
+  hosts_run --no-backup check --fix
+  [ "$status" -eq 0 ]
+  [ ! -d "$(fixture_backup_dir)" ] || [ -z "$(ls -A "$(fixture_backup_dir)")" ]
+}
+
+@test "--strict succeeds once the warnings it would have failed on are fixed" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.5 staging
+10.0.0.5 staging other
+EOF
+  hosts_run check --strict
+  [ "$status" -eq 4 ]
+  hosts_run check --fix --strict
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "fixing more than one line asks first, and does nothing when it cannot" {
+  make_fixture <<'EOF'
+10.0.0.1 a
+10.0.0.1 a
+10.0.0.2 b
+10.0.0.2 b
+EOF
+  local before
+  before=$(cat "$FIXTURE")
+  run --separate-stderr "$HOSTS_BIN" --file "$FIXTURE" check --fix </dev/null
+  [ "$status" -eq 8 ]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+}
+
+@test "entries inside the block section are left to whatever wrote them" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+# >>> hosts block >>>
+0.0.0.0 ads.example
+0.0.0.0 ads.example
+# <<< hosts block <<<
+EOF
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+}
+
+@test "a disabled duplicate is left alone, resolving nothing as it does" {
+  make_fixture <<'EOF'
+127.0.0.1 localhost
+::1 localhost ip6-localhost
+10.0.0.9 build
+# 10.0.0.9 build
+EOF
+  local before
+  before=$(cat "$FIXTURE")
+  hosts_run check --fix --yes
+  [ "$status" -eq 0 ]
+  [ "$(cat "$FIXTURE")" = "$before" ]
+}
+
+@test "help mentions what --fix will and will not touch" {
+  hosts_run check --help
+  [ "$status" -eq 0 ]
+  [[ $output == *'--fix'* ]]
+  [[ $output == *conflicting-ip* ]]
 }
