@@ -13,6 +13,7 @@ declare -A EDIT_DELETE=()
 declare -A EDIT_INSERT=()
 declare -a EDIT_APPEND=()
 EDIT_INSERTED=0
+EDIT_TRAILING_NEWLINE=0
 
 edit_reset() {
   EDIT_REPLACE=()
@@ -20,6 +21,7 @@ edit_reset() {
   EDIT_INSERT=()
   EDIT_APPEND=()
   EDIT_INSERTED=0
+  EDIT_TRAILING_NEWLINE=0
 }
 
 edit_replace() {
@@ -48,16 +50,23 @@ edit_insert_before() {
   EDIT_INSERTED=$((EDIT_INSERTED + 1))
 }
 
+# Give the file the final newline it is missing. This is the only change that
+# alters no line of it, so it counts as one of its own: without that, a file
+# whose sole fault is the missing newline would look like nothing to do.
+edit_end_with_newline() {
+  EDIT_TRAILING_NEWLINE=1
+}
+
 # How many lines of the file the change touches. Used to decide whether an
 # operation is narrow enough to go ahead without asking.
 edit_touched() {
   printf '%s' "$((${#EDIT_REPLACE[@]} + ${#EDIT_DELETE[@]} +
-    ${#EDIT_APPEND[@]} + EDIT_INSERTED))"
+    ${#EDIT_APPEND[@]} + EDIT_INSERTED + EDIT_TRAILING_NEWLINE))"
 }
 
 edit_is_empty() {
   ((${#EDIT_REPLACE[@]} + ${#EDIT_DELETE[@]} +
-    ${#EDIT_APPEND[@]} + EDIT_INSERTED == 0))
+    ${#EDIT_APPEND[@]} + EDIT_INSERTED + EDIT_TRAILING_NEWLINE == 0))
 }
 
 # Write the result of the change to a file.
@@ -72,7 +81,8 @@ edit_render() {
 
   # A file that did not end with a newline keeps that, unless something is
   # appended: appending to such a file means giving it the newline it lacked.
-  if ((!_hf_trailing_newline && ${#EDIT_APPEND[@]} == 0)); then
+  if ((!_hf_trailing_newline && ${#EDIT_APPEND[@]} == 0 &&
+    !EDIT_TRAILING_NEWLINE)); then
     ends_without_newline=1
   fi
 

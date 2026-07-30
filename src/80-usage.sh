@@ -165,11 +165,21 @@ Rules:
 The same name on an IPv4 and on an IPv6 address is normal dual stack and is
 not reported. Cross line rules ignore disabled entries, which resolve nothing.
 
-Exits with 4 when there is at least one error, or with --strict when there is
-at least one warning.
+--fix repairs the findings whose repair the finding itself forces, and only
+those. It removes a duplicate entry or a redundant name, adds a missing
+loopback entry or a missing final newline. It never touches an address or a
+name that does not parse, and never resolves a conflicting-ip: which of two
+addresses a name is meant to have is not in the file. What it fixed stops
+being reported, since it is no longer true; what it left is printed as usual
+and still decides the exit code. It backs up first, honours --dry-run, and
+asks before touching more than one line unless --yes is given.
+
+Exits with 4 when at least one error is left, or with --strict when at least
+one warning is.
 
 Options:
       --strict    treat warnings as errors
+      --fix       repair the findings that have only one possible repair
   -h, --help      show this help
 EOF
 }

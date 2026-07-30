@@ -59,7 +59,9 @@ See
 .B CHECK RULES
 below.
 .B \-\-strict
-makes a warning fail as an error does.
+makes a warning fail as an error does, and
+.B \-\-fix
+repairs the findings that have only one possible repair.
 .TP
 .B export
 Write the file to standard output.
@@ -313,6 +315,40 @@ the error parser of an editor can consume them directly:
 .RS
 .I file : line ": " severity ": " rule ": " message
 .RE
+.SS Fixing
+.B \-\-fix
+repairs the findings whose repair the finding itself forces, and only those:
+.BR duplicate\-entry ,
+by removing the later line, which changes nothing about what the file resolves;
+.BR duplicate\-name ,
+by taking the redundant name off the line, and dropping the line if that leaves
+it with nothing but an address;
+.BR missing\-loopback " and " missing\-loopback6 ,
+by adding the entry above the first one the file already has;
+.BR missing\-trailing\-newline ,
+by adding the newline.
+.PP
+The rest are left alone, deliberately.
+An address or a name that does not parse cannot be repaired without inventing
+one.
+.B conflicting\-ip
+is the one that tempts: two lines send a name to two addresses, and which of
+them is wanted is knowledge the file does not contain.
+.B control\-character
+is left because stripping bytes out of a line in silence would destroy the
+evidence of what happened to it.
+.PP
+A finding that was fixed stops being reported, since it is no longer true of
+the file and an editor jumping to the line would land on one that is now
+correct or gone.
+What is left is printed as usual and still decides the exit status.
+Fixing takes a backup first, honours
+.B \-\-dry\-run
+and
+.BR \-\-no\-backup ,
+and asks before touching more than one line unless
+.B \-\-yes
+is given.
 .SH WRITING
 A change never rebuilds the file from what was parsed out of it.
 It says which lines it replaces, which it deletes and what it appends, and

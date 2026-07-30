@@ -212,3 +212,58 @@ report() {
     fi
   done
 }
+
+@test "check --fix survives it, and what it writes is a file it accepts" {
+  make_fuzz_file
+
+  local before
+  before=$(cat "$FIXTURE")
+
+  run --separate-stderr timeout "$FUZZ_TIMEOUT" \
+    "$HOSTS_BIN" --file "$FIXTURE" check --fix --yes
+
+  if [ "$status" -eq 124 ]; then
+    report 'check --fix did not finish'
+    return 1
+  fi
+  if [ "$status" -ne 0 ] && [ "$status" -ne 4 ]; then
+    report "check --fix returned $status, which is outside its contract"
+    return 1
+  fi
+
+  # Whatever it did, the file is still a file this program can read, and it is
+  # not empty: a fix that lost the contents would pass a weaker test than this.
+  run --separate-stderr timeout "$FUZZ_TIMEOUT" "$HOSTS_BIN" --file "$FIXTURE" ls
+  if [ "$status" -ne 0 ] && [ "$status" -ne 5 ]; then
+    report "ls returned $status on the fixed file"
+    return 1
+  fi
+  [ -s "$FIXTURE" ]
+
+  # And it changed something, or the test would be proving nothing about the
+  # fix at all: this file has duplicates in it by construction.
+  if [ "$(cat "$FIXTURE")" = "$before" ]; then
+    report 'check --fix left a file full of duplicates untouched'
+    return 1
+  fi
+}
+
+@test "a second check --fix over hostile input finds nothing left to do" {
+  make_fuzz_file
+
+  run --separate-stderr timeout "$FUZZ_TIMEOUT" \
+    "$HOSTS_BIN" --file "$FIXTURE" check --fix --yes
+  local once
+  once=$(cat "$FIXTURE")
+
+  run --separate-stderr timeout "$FUZZ_TIMEOUT" \
+    "$HOSTS_BIN" --file "$FIXTURE" check --fix --yes
+  if [ "$status" -eq 124 ]; then
+    report 'the second check --fix did not finish'
+    return 1
+  fi
+  if [ "$(cat "$FIXTURE")" != "$once" ]; then
+    report 'check --fix is not idempotent on hostile input'
+    return 1
+  fi
+}

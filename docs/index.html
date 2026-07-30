@@ -101,7 +101,7 @@ sudo apt update &amp;&amp; sudo apt install hosts-cli</code></pre>
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>1.0.1</code>. The major version is a promise rather than a
+        This is <code>1.1.0</code>. The major version is a promise rather than a
         claim that the work is over: breaking any of the following costs a new
         one.
       </p>
@@ -173,6 +173,11 @@ sudo apt update &amp;&amp; sudo apt install hosts-cli</code></pre>
             <td>Verification: interruption, concurrency, hostile input,
               four distributions</td>
             <td>released in 1.0.1</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><code>check --fix</code></td>
+            <td>released in 1.1.0</td>
           </tr>
         </tbody>
       </table>
@@ -253,6 +258,7 @@ hosts get staging                 # just the address, ready to capture
 hosts search "staging box"        # match on address, names or comments
 hosts check                       # lint the file
 hosts --file ./hosts.new check --strict
+sudo hosts check --fix            # repair what has only one repair
 
 sudo hosts add 10.0.0.5 staging staging.local
 sudo hosts off staging            # keep the line, stop it resolving
@@ -305,7 +311,8 @@ man hosts</code></pre>
             <td><code>check</code></td>
             <td>
               Lint the file. <code>--strict</code> makes a warning fail as an
-              error does.
+              error does, and <code>--fix</code> repairs the findings that have
+              only one possible repair.
             </td>
           </tr>
           <tr>
@@ -522,6 +529,7 @@ man hosts</code></pre>
           <tr>
             <th>Rule</th>
             <th>Severity</th>
+            <th><code>--fix</code></th>
             <th>Meaning</th>
           </tr>
         </thead>
@@ -529,56 +537,67 @@ man hosts</code></pre>
           <tr>
             <td><code>invalid-line</code></td>
             <td>error</td>
+            <td>no</td>
             <td>not an address followed by a hostname</td>
           </tr>
           <tr>
             <td><code>invalid-ip</code></td>
             <td>error</td>
+            <td>no</td>
             <td>the address does not parse</td>
           </tr>
           <tr>
             <td><code>invalid-hostname</code></td>
             <td>error</td>
+            <td>no</td>
             <td>the name breaks RFC 1123</td>
           </tr>
           <tr>
             <td><code>control-character</code></td>
             <td>error</td>
+            <td>no</td>
             <td>the line contains a control character</td>
           </tr>
           <tr>
             <td><code>duplicate-entry</code></td>
             <td>error</td>
+            <td><strong>yes</strong></td>
             <td>an earlier line is identical</td>
           </tr>
           <tr>
             <td><code>duplicate-name</code></td>
             <td>warning</td>
+            <td><strong>yes</strong></td>
             <td>the name already points at that address</td>
           </tr>
           <tr>
             <td><code>conflicting-ip</code></td>
             <td>warning</td>
+            <td>no</td>
             <td>the name points elsewhere in the same family</td>
           </tr>
           <tr>
             <td><code>nonstandard-hostname</code></td>
             <td>warning</td>
+            <td>no</td>
             <td>the name uses an underscore</td>
           </tr>
           <tr>
             <td><code>missing-loopback</code></td>
             <td>warning</td>
+            <td><strong>yes</strong></td>
             <td>no active <code>127.0.0.1 localhost</code></td>
           </tr>
           <tr>
             <td><code>missing-loopback6</code></td>
             <td>warning</td>
+            <td><strong>yes</strong></td>
             <td>no active <code>::1 localhost</code></td>
           </tr>
           <tr>
             <td><code>missing-trailing-newline</code></td>
             <td>warning</td>
+            <td><strong>yes</strong></td>
             <td>the file does not end with a newline</td>
           </tr>
         </tbody>
@@ -595,6 +614,41 @@ man hosts</code></pre>
       </p>
       <pre><code>/etc/hosts:14: error: duplicate-entry: identical to the entry on line 12
 /etc/hosts: warning: missing-loopback6: no active entry maps ::1 to localhost</code></pre>
+
+      <h3 id="fixing">Fixing</h3>
+      <p>
+        <code>--fix</code> repairs the findings whose repair the finding itself
+        forces, and only those &mdash; the five marked in the table above. It
+        removes a duplicate entry, takes a redundant name off a line and drops
+        the line if that leaves it with nothing but an address, adds a missing
+        loopback entry above the first entry the file has, and adds a missing
+        final newline.
+      </p>
+      <p>
+        The rest are left alone on purpose. An address or a name that does not
+        parse cannot be repaired without inventing one.
+        <code>conflicting-ip</code> is the one that tempts: two lines send a
+        name to two addresses, and which of them is wanted is knowledge the file
+        does not contain. <code>control-character</code> is left because
+        stripping bytes out of a line in silence would destroy the evidence of
+        what happened to it.
+      </p>
+      <pre><code>sudo hosts check --fix              # repair what has one repair
+hosts --file ./hosts.new check --fix --dry-run</code></pre>
+      <p>
+        After a fix the file is read and scanned again rather than the earlier
+        findings being patched up, so every line number and every message refers
+        to the file as it now is, and anything a fix introduced would be
+        reported too. What is left is printed as usual and still decides the
+        exit code: <code>hosts check --fix</code> in continuous integration
+        fails exactly when something a person has to look at is still there.
+      </p>
+      <p>
+        Fixing is a write like any other in this program: it takes a backup
+        first, honours <code>--dry-run</code> and <code>--no-backup</code>, and
+        asks before touching more than one line unless <code>--yes</code> is
+        given. A file with nothing to fix is not written to at all.
+      </p>
 
       <h3 id="addresses-and-names">Addresses and names</h3>
       <p>
@@ -696,6 +750,13 @@ man hosts</code></pre>
         schema carries a <code>version</code> field and is part of the public
         interface. Bytes outside ASCII are passed through unchanged, so comments
         stay readable.
+      </p>
+      <p>
+        Fields are added within a schema version and never change meaning or
+        disappear without the version being raised, so a reader should ignore
+        what it does not recognise rather than reject it.
+        <code>summary.fixed</code> on <code>check</code> arrived that way in
+        1.1.0.
       </p>
       <pre><code>{
   "version": 1,
@@ -1125,7 +1186,7 @@ make clean</code></pre>
         <a href="https://github.com/n36l3c7/hosts-cli/issues">Issues</a>
       </p>
       <p>
-        hosts 1.0.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 1.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>

@@ -117,7 +117,7 @@ _hosts_completions() {
   if [[ $current == -* ]]; then
     case $command in
       ls) candidates='--all --disabled --blocked' ;;
-      check) candidates='--strict' ;;
+      check) candidates='--strict --fix' ;;
       block) candidates='--ipv4-only --to' ;;
       *) candidates='' ;;
     esac
