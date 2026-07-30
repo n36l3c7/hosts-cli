@@ -38,7 +38,7 @@ jobs:
             ca-certificates curl git make \
             acl diffutils util-linux coreutils procps
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install a bats new enough for this suite
         # Debian 11 and Ubuntu 22.04 carry bats 1.2, and the suite needs the

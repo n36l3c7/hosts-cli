@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-30
+
+Nothing about the program changes. What changes is what can be verified about
+the thing you install, and one sentence of documentation that was not true.
+
+### Security
+
+- Every GitHub Action is pinned to a commit rather than to a tag. A tag can be
+  moved by whoever owns it, and the release workflow holds the key the apt
+  repository is signed with: a moved tag would have run someone else's code
+  with that key in the environment. The tag each commit was resolved from is
+  kept in a comment beside it, and the README says how to move one, since
+  pinning means updates no longer arrive on their own.
+
+### Added
+
+- A `SHA256SUMS` file on every release. Installing from apt has always verified
+  the signature on the repository; downloading the script or the `.deb` straight
+  from the release page verified nothing. It establishes the files are the ones
+  the release was built with, and nothing about who built them — for that,
+  install from apt.
+
+### Fixed
+
+- The README and the site no longer promise something that never shipped. Both
+  said bulk handling of blocklists "arrives with `block` and `import`, which
+  will use a single `awk` pass where it wins". Those commands shipped in 0.4.0
+  and contain no `awk` at all. The sentence was written before they existed and
+  never revisited, and a reader would have taken it for a description of how the
+  program behaves. The measured figures around it stand; only the promise is
+  gone.
+
 ## [1.1.0] - 2026-07-30
 
 `check` can now repair what it finds, for the findings where the repair is not a
@@ -413,7 +445,8 @@ integration, with no entry management command yet.
 - Documentation site under `docs/`, published with GitHub Pages.
 - README, changelog and MIT licence.
 
-[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/n36l3c7/hosts-cli/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/n36l3c7/hosts-cli/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/n36l3c7/hosts-cli/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/n36l3c7/hosts-cli/compare/v0.6.0...v1.0.0

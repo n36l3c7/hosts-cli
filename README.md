@@ -6,7 +6,7 @@
 A safe command-line manager for `/etc/hosts`.
 
 [![CI](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/n36l3c7/hosts-cli/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 
 Documentation: <https://n36l3c7.github.io/hosts-cli/>
@@ -40,7 +40,7 @@ point a hostname at a staging box, or block a domain several times a week.
 
 ## Status
 
-This is `1.1.0`. The major version is a promise rather than a claim that the
+This is `1.1.1`. The major version is a promise rather than a claim that the
 work is over: breaking any of the following costs a new one.
 
 - The exit codes `0` to `8`.
@@ -62,6 +62,7 @@ work is over: breaking any of the following costs a new one.
 | 7 | Debian package and APT repository | released in 1.0.0 |
 | 8 | Verification: interruption, concurrency, hostile input, four distributions | released in 1.0.1 |
 | 9 | `check --fix` | released in 1.1.0 |
+| 10 | Release integrity: pinned actions, checksummed assets | released in 1.1.1 |
 
 ## Requirements
 
@@ -103,6 +104,17 @@ The package installs the command, the man page and the completions for bash
 and zsh. Every release is also attached to
 [GitHub Releases](https://github.com/n36l3c7/hosts-cli/releases), the `.deb`
 included.
+
+Installing from apt verifies the signature on the repository, so nothing more
+is needed. Downloading an asset from the release page does not, and every
+release carries a `SHA256SUMS` file for that case:
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+That establishes the files are the ones the release was built with. It says
+nothing about who built them: for that, install from the signed apt repository.
 
 ### From source
 
@@ -639,6 +651,20 @@ The test suite always runs against the built script and against fixture files
 passed with `--file`. It never requires root and never touches the real
 `/etc/hosts`.
 
+### Workflows
+
+Every GitHub Action is pinned to a commit, not to a tag. A tag can be moved,
+and the release workflow holds the key the apt repository is signed with: a
+moved tag would run someone else's code with that key in the environment. The
+tag it was pinned from is kept in a comment beside it.
+
+Pinning means updates do not arrive on their own. To move one, resolve the tag
+and replace the commit:
+
+```sh
+gh api repos/actions/checkout/commits/v7 --jq .sha
+```
+
 The file is held in parallel arrays, one per field, rather than in serialised
 records: field access stays a single array lookup, and there is no separator a
 stray byte could collide with. Every line keeps its original text, so a later
@@ -654,8 +680,6 @@ rewrite can leave untouched lines exactly as they were.
 For the size `/etc/hosts` actually is, the tool is instant. A blocklist of tens
 of thousands of entries is not: Bash costs roughly 150 µs per line whatever the
 parser does, and no tuning inside the loop changes that order of magnitude.
-Bulk handling of blocklists arrives with `block` and `import`, which will use a
-single `awk` pass where it wins.
 
 Two changes did move the number, and both came out of measurement rather than
 intuition. `read <<<` was replaced with word splitting, because a here-string

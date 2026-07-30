@@ -101,7 +101,7 @@ sudo apt update &amp;&amp; sudo apt install hosts-cli</code></pre>
 
       <h2 id="status">Status</h2>
       <p>
-        This is <code>1.1.0</code>. The major version is a promise rather than a
+        This is <code>1.1.1</code>. The major version is a promise rather than a
         claim that the work is over: breaking any of the following costs a new
         one.
       </p>
@@ -179,6 +179,11 @@ sudo apt update &amp;&amp; sudo apt install hosts-cli</code></pre>
             <td><code>check --fix</code></td>
             <td>released in 1.1.0</td>
           </tr>
+          <tr>
+            <td>10</td>
+            <td>Release integrity: pinned actions, checksummed assets</td>
+            <td>released in 1.1.1</td>
+          </tr>
         </tbody>
       </table>
 
@@ -231,6 +236,17 @@ sudo apt install hosts-cli</code></pre>
         bash and zsh. Every release is also attached to
         <a href="https://github.com/n36l3c7/hosts-cli/releases">GitHub
         Releases</a>, the <code>.deb</code> included.
+      </p>
+      <p>
+        Installing from apt verifies the signature on the repository, so nothing
+        more is needed. Downloading an asset from the release page does not, and
+        every release carries a <code>SHA256SUMS</code> file for that case:
+      </p>
+      <pre><code>sha256sum -c SHA256SUMS</code></pre>
+      <p>
+        That establishes the files are the ones the release was built with. It
+        says nothing about who built them: for that, install from the signed apt
+        repository.
       </p>
 
       <h3 id="from-source">From source</h3>
@@ -1147,6 +1163,20 @@ make clean</code></pre>
         touches the real <code>/etc/hosts</code>.
       </p>
 
+      <h3 id="workflows">Workflows</h3>
+      <p>
+        Every GitHub Action is pinned to a commit, not to a tag. A tag can be
+        moved, and the release workflow holds the key the apt repository is
+        signed with: a moved tag would run someone else's code with that key in
+        the environment. The tag it was pinned from is kept in a comment beside
+        it.
+      </p>
+      <p>
+        Pinning means updates do not arrive on their own. To move one, resolve
+        the tag and replace the commit:
+      </p>
+      <pre><code>gh api repos/actions/checkout/commits/v7 --jq .sha</code></pre>
+
       <h3 id="performance">Performance</h3>
       <table>
         <thead>
@@ -1173,9 +1203,7 @@ make clean</code></pre>
         For the size <code>/etc/hosts</code> actually is, the tool is instant. A
         blocklist of tens of thousands of entries is not: Bash costs roughly
         150 &micro;s per line whatever the parser does, and no tuning inside the
-        loop changes that order of magnitude. Bulk handling of blocklists
-        arrives with <code>block</code> and <code>import</code>, which will use
-        a single <code>awk</code> pass where it wins.
+        loop changes that order of magnitude.
       </p>
     </main>
 
@@ -1186,7 +1214,7 @@ make clean</code></pre>
         <a href="https://github.com/n36l3c7/hosts-cli/issues">Issues</a>
       </p>
       <p>
-        hosts 1.1.0 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
+        hosts 1.1.1 &mdash; MIT licensed &mdash; Copyright &copy; 2026 Samuele
         Gervasio.
       </p>
     </footer>
