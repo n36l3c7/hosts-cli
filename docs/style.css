@@ -10,6 +10,11 @@
   --accent: #1b5fa8;
   --code-bg: #f6f7f9;
   --button-bg: #ffffff;
+
+  /* The navigation bar is one line tall and says so, so that the offset which
+     keeps an anchored heading clear of it is derived from its height rather
+     than guessed at and left to drift. */
+  --nav-height: 3rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -134,22 +139,32 @@ figcaption {
 
 /* --- section navigation ----------------------------------------------- */
 
+/* A sticky element only sticks within its containing block, so this has to be
+   a child of body: nested in the header it would come unstuck the moment the
+   header scrolled past, which is to say immediately. It also stays on one line
+   rather than wrapping, because a bar whose height depends on the width of the
+   window cannot have a matching scroll offset. */
 nav {
   position: sticky;
   top: 0;
   z-index: 10;
+  height: var(--nav-height);
   margin: 2.5rem -1.25rem 0;
-  padding: 0.7rem 1.25rem;
+  padding: 0 1.25rem;
   background: var(--bg);
   border-bottom: 1px solid var(--rule);
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.1rem;
-  font-size: 0.92rem;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.95rem;
+  font-size: 0.88rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 nav a {
   text-decoration: none;
+  white-space: nowrap;
 }
 
 nav a:hover {
@@ -174,7 +189,7 @@ h3 {
 /* So that following an anchor does not hide the heading behind the nav. */
 h2,
 h3 {
-  scroll-margin-top: 4rem;
+  scroll-margin-top: calc(var(--nav-height) + 0.75rem);
 }
 
 code,
